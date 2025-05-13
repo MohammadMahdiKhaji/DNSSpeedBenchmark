@@ -1,23 +1,19 @@
-package org.dns;
+package app.dns;
 
 import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartMouseEvent;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.entity.ChartEntity;
 import org.jfree.chart.entity.XYItemEntity;
-import org.jfree.chart.labels.StandardXYItemLabelGenerator;
-import org.jfree.chart.labels.StandardXYToolTipGenerator;
-import org.jfree.chart.labels.XYItemLabelGenerator;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.XYShapeRenderer;
-import org.jfree.data.xy.XYDataset;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 
 import javax.swing.*;
 import java.awt.*;
-import java.net.URI;
 import java.util.*;
 import java.util.List;
 
@@ -90,13 +86,6 @@ public class Charts {
             dnsResult.setPoints(dnsResult.getSuccessPercentage()/100 - dnsResult.getAverageLatency()/temp);
         }
         resultsUnsorted.sort(Comparator.comparing(DNSResult::getPoints).reversed());
-
-//        resultsUnsorted.sort(Comparator
-//                .comparing((DNSResult d) -> d.getSuccessPercentage() == 100.0 ? 0 : 1)
-//                .thenComparing(DNSResult::getAverageLatency));
-//        for (DNSResult dnsResult : resultsUnsorted) {
-//            System.out.println(dnsResult.toString());
-//        }
         return resultsUnsorted;
     }
     private void resultChart(List<DNSResult> resultsSorted) {
@@ -168,9 +157,7 @@ public class Charts {
             }
 
             @Override
-            public void chartMouseMoved(org.jfree.chart.ChartMouseEvent event) {
-                // Optional: Hover effects
-            }
+            public void chartMouseMoved(ChartMouseEvent chartMouseEvent) {}
         });
         frame.setVisible(true);
     }

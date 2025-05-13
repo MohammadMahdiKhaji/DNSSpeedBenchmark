@@ -1,4 +1,6 @@
-import org.dns.Charts;
+import app.dns.Charts;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import org.xbill.DNS.*;
 import org.xbill.DNS.Record;
 
@@ -6,7 +8,6 @@ import javax.swing.*;
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -17,16 +18,118 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Test {
+
+    @org.junit.jupiter.api.Test
+    void lambdaEventTest() {
+        EventHandler<ActionEvent> event = new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                System.out.println("hello world");
+            }
+        };
+
+        ActionEvent fakeEvent = new ActionEvent();
+
+        event.handle(fakeEvent);
+    }
+    @org.junit.jupiter.api.Test
+    void iranAccessTest() throws IOException, InterruptedException {
+        FileInputStream fileInputStream = new FileInputStream("src/main/resources/util/config.properties");
+        Properties properties = new Properties();
+        properties.load(fileInputStream);
+
+        String domains = properties.getProperty("EA.target_domains");
+        final String[] domainArray = Arrays.stream(domains.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toArray(String[]::new);
+
+        String dnsResolvers = properties.getProperty("DNS.resolvers");
+        if (dnsResolvers == null) return;
+
+        String[] dnsArray = Arrays.stream(dnsResolvers.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toArray(String[]::new);
+
+        ExecutorService subExecutor = Executors.newFixedThreadPool(domainArray.length);
+        List<Callable<Void>> subtasks = new ArrayList<>();
+
+        for (String dns : dnsArray) {
+            SimpleResolver resolver = new SimpleResolver(dns);
+//            ExtendedResolver extendedResolver = new ExtendedResolver();
+
+            subtasks.add(() -> {
+                for (String targetDomain : domainArray) {
+                    try {
+                        Lookup lookup = new Lookup(targetDomain, Type.A);
+                        lookup.setResolver(resolver);
+                        lookup.run();
+
+                        if (lookup.getResult() == Lookup.SUCCESSFUL) {
+                            String ip = lookup.getAnswers()[0].rdataToString();
+                            String resolveArg = targetDomain + ":443:" + ip;
+
+                            ProcessBuilder processBuilder = new ProcessBuilder(
+                                    "curl", "-I", "--max-time", "10", "--resolve", resolveArg, "https://" + targetDomain
+                            );
+
+                            Process process = processBuilder.start();
+
+                            BufferedReader reader = new BufferedReader(new InputStreamReader(
+                                    new SequenceInputStream(process.getInputStream(), process.getErrorStream())
+                            ));
+
+                            String line;
+                            while ((line = reader.readLine()) != null) {
+                                if (line.contains("403") || line.contains("451")) {
+                                    System.out.printf("Access restricted for domain: %s, DNS: %s \n", targetDomain, dns);
+                                    break;
+                                }
+                            }
+
+                            // Ensure the process finishes
+                            process.waitFor(15, TimeUnit.SECONDS);
+                            process.destroy();
+                        }
+                    } catch (Exception e) {
+                        System.err.printf("Error checking domain %s with DNS %s: %s\n", targetDomain, dns, e.getMessage());
+                    }
+                }
+                return null;
+            });
+        }
+
+        subExecutor.invokeAll(subtasks);
+        subExecutor.shutdown();
+        subExecutor.awaitTermination(2, TimeUnit.MINUTES);
+    }
+
     @org.junit.jupiter.api.Test
     void checkDNSType() throws IOException {
         FileInputStream fileInputStream = new FileInputStream("src/main/resources/util/config.properties");
         Properties properties = new Properties();
         properties.load(fileInputStream);
         String domains = properties.getProperty("EA.target_domains");
-        final String[] domainArray = Arrays.stream(domains.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .toArray(String[]::new);
+//        final String[] domainArray = Arrays.stream(domains.split(","))
+//                .map(String::trim)
+//                .filter(s -> !s.isEmpty())
+//                .toArray(String[]::new);
+        final String[] domainArray = {"news.ea.com"};
+        SimpleResolver resolver1 = new SimpleResolver("8.8.8.8");
+        for (String targetDomain : domainArray) {
+            Lookup lookup1 = new Lookup(targetDomain, Type.A);
+            lookup1.setDefaultResolver(resolver1);
+            lookup1.setResolver(resolver1);
+            Record[] records1 = lookup1.run();
+            for (Record record : records1) {
+//                System.out.println(lookup.getAnswers()[0].rdataToString());
+                if (record != null) {
+                    System.out.println(record);
+                }
+            }
+        }
+
         SimpleResolver resolver = new SimpleResolver("10.202.10.11");
         for (String targetDomain : domainArray) {
             Lookup lookup = new Lookup(targetDomain, Type.A);
@@ -34,7 +137,7 @@ public class Test {
             lookup.setResolver(resolver);
             Record[] records = lookup.run();
             for (Record record : records) {
-                System.out.println(lookup.getAnswers()[0].rdataToString());
+//                System.out.println(lookup.getAnswers()[0].rdataToString());
                 if (record != null) {
                     System.out.println(record);
                 }

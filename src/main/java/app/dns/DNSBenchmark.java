@@ -1,4 +1,4 @@
-package org.dns;
+package app.dns;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -14,6 +14,7 @@ import java.util.Properties;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class DNSBenchmark {
@@ -21,16 +22,24 @@ public class DNSBenchmark {
     private static String OS = null;
     private final static Properties properties = new Properties();
 
-    public DNSBenchmark() throws IOException {
+    public DNSBenchmark() {
         OS = System.getProperty("os.name").toLowerCase();
 
-        FileInputStream fileInputStream = new FileInputStream("src/main/resources/util/config.properties");
-        properties.load(fileInputStream);
+        try (FileInputStream fileInputStream = new FileInputStream("src/main/resources/util/config.properties")) {
+            properties.load(fileInputStream);
+        } catch (FileNotFoundException e) {
+            logger.error("Configuration file not found", e);
+            throw new RuntimeException("Configuration file missing", e);
+        } catch (IOException e) {
+            logger.error("Error reading configuration file", e);
+            throw new RuntimeException("Could not read configuration file", e);
+        }
     }
 
-    public List<DNSResult> execute(int serverType) {
+    public List<DNSResult> execute(int serverType, int packetCount) {
         String dnsResolvers = properties.getProperty("DNS.resolvers");
         String[] dnsArray = null;
+        String domains = null;
         if (dnsResolvers != null) {
             dnsArray = Arrays.stream(dnsResolvers.split(","))
                     .map(String::trim)
@@ -44,19 +53,7 @@ public class DNSBenchmark {
         switch (serverType) {
             case Type.EA_SERVERS:
                 logger.info("Loading EA domain and sub-domains.");
-                String domains = properties.getProperty("EA.target_domains");
-                final String[] domainArray;
-                if (domains != null) {
-                    domainArray = Arrays.stream(domains.split(","))
-                            .map(String::trim)
-                            .filter(s -> !s.isEmpty())
-                            .toArray(String[]::new);
-                    if (flushCache()) {
-                        return testDNSPerformance(dnsArray, domainArray, 2);
-                    }
-                } else {
-                    logger.error("target_domains not found in config.");
-                }
+                domains = properties.getProperty("EA.target_domains");
                 break;
             case Type.MICROSOFT_SERVERS:
                 logger.info("loading..");
@@ -64,6 +61,19 @@ public class DNSBenchmark {
             case Type.ROCKSTAR_SERVERS:
                 logger.info("loading..");
                 break;
+        }
+
+        final String[] domainArray;
+        if (domains != null) {
+            domainArray = Arrays.stream(domains.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .toArray(String[]::new);
+            if (flushCache()) {
+                return testDNSPerformance(dnsArray, domainArray, packetCount);
+            }
+        } else {
+            logger.error("target_domains not found in config.");
         }
         return null;
     }
@@ -77,7 +87,7 @@ public class DNSBenchmark {
             return true;
         } catch (IOException e) {
             logger.error("Flushing failed, message : {}", e.getMessage());
-            return false;   //bad practice
+            return false;
         }
     }
 
@@ -124,7 +134,8 @@ public class DNSBenchmark {
                                         countLatency.incrementAndGet();
                                     }
                                 }
-                                process.waitFor();
+                                process.waitFor(10, TimeUnit.SECONDS);
+                                process.destroy();
                             } catch (Exception e) {
                                 logger.error("Ping failed: " + e.getMessage());
                             } finally {

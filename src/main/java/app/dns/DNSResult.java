@@ -1,4 +1,4 @@
-package org.dns;
+package app.dns;
 
 public class DNSResult {
     private String dnsServer;
