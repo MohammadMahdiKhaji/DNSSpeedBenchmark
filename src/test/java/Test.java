@@ -20,6 +20,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Test {
 
     @org.junit.jupiter.api.Test
+    void regexTest() {
+
+        String avg = "0.119/0.130/0.144/0.010 ms";
+//        avg = avg.replaceAll("\\d.\\d/[^\\d.\\d]/\\d.\\d/\\d.\\d ms", "");
+        avg = avg.replaceAll("^\\d+\\.\\d+/|(\\d+\\.\\d+)/\\d+\\.\\d+/\\d+\\.\\d+ ms$", "$1");
+        System.out.println(avg);
+    }
+
+    @org.junit.jupiter.api.Test
     void lambdaEventTest() {
         EventHandler<ActionEvent> event = new EventHandler<ActionEvent>() {
             @Override

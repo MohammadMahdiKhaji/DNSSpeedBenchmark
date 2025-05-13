@@ -19,10 +19,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class DNSBenchmark {
     private static Logger logger = LogManager.getLogger(DNSBenchmark.class);
+    private final ProgressListener listener;
     private static String OS = null;
     private final static Properties properties = new Properties();
 
-    public DNSBenchmark() {
+    public DNSBenchmark(ProgressListener listener) {
+        this.listener = listener;
+
         OS = System.getProperty("os.name").toLowerCase();
 
         try (FileInputStream fileInputStream = new FileInputStream("src/main/resources/util/config.properties")) {
@@ -83,21 +86,29 @@ public class DNSBenchmark {
             if (OS.contains("win")) {
                 Runtime.getRuntime().exec("ipconfig /flushdns");
                 logger.info("DNS cache flushed.");
+                return true;
+            } else if (OS.contains("mac")) {
+                Runtime.getRuntime().exec("sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder");
+                logger.info("DNS cache flushed on macOS.");
+                return true;
             }
-            return true;
         } catch (IOException e) {
             logger.error("Flushing failed, message : {}", e.getMessage());
-            return false;
         }
+        return false;
     }
 
     private String[] pingCMD(String ip, int packetCount) {
         if (OS.contains("win")) {
             return new String[]{"ping", "-n", String.valueOf(packetCount), ip};
+        } else if (OS.contains("mac")) {
+            return new String[]{"ping", "-c", String.valueOf(packetCount), ip};
         }
         logger.error("Creating ping command failed.");
         return null;
     }
+
+    AtomicInteger progressCount = new AtomicInteger(0);
 
     private  List<DNSResult> testDNSPerformance(String[] dnsArray, String[] domainArray, int packetCount) {
         List<DNSResult> dnsResults = new ArrayList<>();
@@ -132,6 +143,11 @@ public class DNSBenchmark {
                                         String avg = line.substring(avgIndex).replaceAll("[^\\d]", "");
                                         latency.addAndGet(Integer.parseInt(avg));
                                         countLatency.incrementAndGet();
+                                    } else if (OS.contains("mac") && line.contains("/avg/")) {
+                                        int avgIndex = line.indexOf("min/avg/max/stddev = ") + "min/avg/max/stddev = ".length();
+                                        String avg = line.substring(avgIndex).replaceAll("^\\d+\\.\\d+/|(\\d+\\.\\d+)/\\d+\\.\\d+/\\d+\\.\\d+ ms$", "$1");
+                                        latency.addAndGet((int) Math.round(Double.parseDouble(avg)));
+                                        countLatency.incrementAndGet();
                                     }
                                 }
                                 process.waitFor(10, TimeUnit.SECONDS);
@@ -142,6 +158,7 @@ public class DNSBenchmark {
                                 countSuccess.incrementAndGet();
                             }
                         }
+                        listener.updateProgress((double) progressCount.incrementAndGet() / (dnsArray.length * domainArray.length));
                         return null;
                     });
                 }

@@ -2,6 +2,7 @@ package app.dns.controller;
 
 import app.dns.Charts;
 import app.dns.DNSBenchmark;
+import app.dns.ProgressListener;
 import app.dns.Type;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -20,8 +21,8 @@ import java.util.Properties;
 
 public class MainController {
     private static Logger logger = LogManager.getLogger(MainController.class);
-    private final static Properties properties = new Properties();
-    private static int selectedDomainType = 0;
+    private final Properties properties = new Properties();
+    private Integer selectedDomainType = null;
     @FXML
     private ListView<String> dnsServersView;
     @FXML
@@ -39,12 +40,6 @@ public class MainController {
 
         for (MenuItem item : loadDomainTypes()) {
             item.setOnAction(event -> onMenuItemSelected(item));
-//            item.setOnAction(new EventHandler<ActionEvent>() {
-//                @Override
-//                public void handle(ActionEvent event) {
-//                    onMenuItemSelected(item);
-//                }
-//            });
             menuButtonDomains.getItems().add(item);
         }
 
@@ -83,7 +78,9 @@ public class MainController {
     public void onMenuItemSelected(MenuItem item) {
         String selectedDomainType = item.getText();
         ObservableList<String> filteredDomains = FXCollections.observableArrayList(filterDomainsByType(selectedDomainType));
-        domainsView.setItems(filteredDomains);
+        this.selectedDomainType = new Type().getNumberByName(selectedDomainType);
+        this.domainsView.setItems(filteredDomains);
+        this.menuButtonDomains.setText(item.getText());
     }
 
     public String[] filterDomainsByType(String domainType) {
@@ -118,7 +115,12 @@ public class MainController {
     
     public void startBenchmark(int i) {
         logger.info("Starting...........");
-        DNSBenchmark dnsBenchmark = new DNSBenchmark();
+        DNSBenchmark dnsBenchmark = new DNSBenchmark(new ProgressListener() {
+            @Override
+            public void updateProgress(double progress) {
+                progressBar.setProgress(progress);
+            }
+        });
         SwingUtilities.invokeLater(() -> Charts.getInstance().generateDNSPerformanceChart(dnsBenchmark.execute(i,1)));
     }
 }
