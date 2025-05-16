@@ -41,8 +41,10 @@
 <?import javafx.scene.control.MenuItem?>
 <?import javafx.scene.control.ProgressBar?>
 <?import javafx.scene.control.SeparatorMenuItem?>
+<?import javafx.scene.control.Spinner?>
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
 
 <VBox prefHeight="400.0" prefWidth="640.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="app.dns.controller.MainController">
   <children>
@@ -87,8 +89,11 @@
     </MenuBar>
     <AnchorPane maxHeight="-1.0" maxWidth="-1.0" prefHeight="-1.0" prefWidth="-1.0" VBox.vgrow="ALWAYS">
       <children>
-            <ListView fx:id="dnsServersView" layoutX="14.0" layoutY="20.0" prefHeight="342.0" prefWidth="220.0" AnchorPane.bottomAnchor="15.0" AnchorPane.topAnchor="25.0" />
-            <Button fx:id="startBenchmarkButton" layoutX="499.0" layoutY="173.0" mnemonicParsing="false" text="Start" />
+            <ListView fx:id="dnsServersView" layoutX="14.0" layoutY="20.0" prefHeight="342.0" prefWidth="220.0" AnchorPane.bottomAnchor="15.0" AnchorPane.leftAnchor="14.0" AnchorPane.topAnchor="25.0" />
+            <Button fx:id="startBenchmarkButton" layoutX="523.0" layoutY="276.0" mnemonicParsing="false" text="Start">
+               <font>
+                  <Font name="System Bold Italic" size="12.0" />
+               </font></Button>
             <ListView fx:id="domainsView" layoutX="234.0" layoutY="26.0" prefHeight="336.0" prefWidth="220.0" AnchorPane.bottomAnchor="15.0" AnchorPane.topAnchor="25.0" />
             <MenuButton fx:id="menuButtonDomains" layoutX="290.0" mnemonicParsing="false" text="MenuButton">
               <items>
@@ -96,7 +101,8 @@
               </items>
             </MenuButton>
             <Label layoutX="14.0" layoutY="4.0" prefHeight="17.0" prefWidth="169.0" text="DNS Servers: " textAlignment="CENTER" textFill="RED" />
-            <ProgressBar fx:id="progressBar" layoutX="426.0" layoutY="227.0" prefWidth="200.0" progress="0.0" />
+            <ProgressBar fx:id="progressBar" layoutX="472.0" layoutY="306.0" prefHeight="20.0" prefWidth="152.0" progress="0.0" AnchorPane.rightAnchor="14.0" />
+            <Spinner fx:id="packetCountSelector" layoutX="472.0" layoutY="230.0" AnchorPane.rightAnchor="14.0" />
       </children>
     </AnchorPane>
   </children>

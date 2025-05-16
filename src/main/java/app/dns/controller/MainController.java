@@ -1,9 +1,9 @@
 package app.dns.controller;
 
-import app.dns.Charts;
-import app.dns.DNSBenchmark;
-import app.dns.ProgressListener;
-import app.dns.Type;
+import app.dns.model.util.jchart.Charts;
+import app.dns.model.util.DNSBenchmark;
+import app.dns.model.util.ProgressListener;
+import app.dns.model.entity.Type;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -22,7 +22,6 @@ import java.util.Properties;
 public class MainController {
     private static Logger logger = LogManager.getLogger(MainController.class);
     private final Properties properties = new Properties();
-    private Integer selectedDomainType = null;
     @FXML
     private ListView<String> dnsServersView;
     @FXML
@@ -34,6 +33,9 @@ public class MainController {
     @FXML
     private ProgressBar progressBar;
     @FXML
+    private Spinner<Integer> packetCountSelector;
+
+    @FXML
     public void initialize() {
         ObservableList<String> dns = FXCollections.observableArrayList(loadDNSFromConfig());
         dnsServersView.setItems(dns);
@@ -43,8 +45,11 @@ public class MainController {
             menuButtonDomains.getItems().add(item);
         }
 
-        startBenchmarkButton.setOnAction(event -> startBenchmark(selectedDomainType));
+        startBenchmarkButton.setOnAction(event -> startBenchmark());
+
+        packetCountSelector.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 100, 1, 1));
     }
+
     public MainController() throws IOException {
         FileInputStream fileInputStream = new FileInputStream("src/main/resources/util/config.properties");
         properties.load(fileInputStream);
@@ -78,7 +83,6 @@ public class MainController {
     public void onMenuItemSelected(MenuItem item) {
         String selectedDomainType = item.getText();
         ObservableList<String> filteredDomains = FXCollections.observableArrayList(filterDomainsByType(selectedDomainType));
-        this.selectedDomainType = new Type().getNumberByName(selectedDomainType);
         this.domainsView.setItems(filteredDomains);
         this.menuButtonDomains.setText(item.getText());
     }
@@ -89,7 +93,6 @@ public class MainController {
             case Type.EA_SERVERS:
                 logger.info("Loading EA domain and sub-domains.");
                 domains = properties.getProperty("EA.target_domains");
-                selectedDomainType = Type.EA_SERVERS;
                 break;
             case Type.MICROSOFT_SERVERS:
                 logger.info("loading..");
@@ -112,8 +115,18 @@ public class MainController {
             return null;
         }
     }
-    
-    public void startBenchmark(int i) {
+
+    public void startBenchmark() {
+        int domainType = new Type().getNumberByName(menuButtonDomains.getText());
+        if (domainType == -1) {
+            Alert alert = new Alert(Alert.AlertType.WARNING);
+            alert.setTitle("Missing Input");
+            alert.setHeaderText(null);
+            alert.setContentText("Please select a domain type.");
+            alert.showAndWait();
+            return;
+        }
+
         logger.info("Starting...........");
         DNSBenchmark dnsBenchmark = new DNSBenchmark(new ProgressListener() {
             @Override
@@ -121,6 +134,6 @@ public class MainController {
                 progressBar.setProgress(progress);
             }
         });
-        SwingUtilities.invokeLater(() -> Charts.getInstance().generateDNSPerformanceChart(dnsBenchmark.execute(i,1)));
+        SwingUtilities.invokeLater(() -> Charts.getInstance().generateDNSPerformanceChart(dnsBenchmark.execute(domainType, packetCountSelector.getValue())));
     }
 }

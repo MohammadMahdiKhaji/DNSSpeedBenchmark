@@ -1,11 +1,13 @@
-package app.dns;
+package app.dns.model.entity;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public final class Type {
+    private static Logger logger = LogManager.getLogger(Type.class);
     public static final int EA_SERVERS = 0;
     public static final int MICROSOFT_SERVERS = 1;
     public static final int ROCKSTAR_SERVERS = 2;
@@ -24,7 +26,8 @@ public final class Type {
         if (number < names.size()) {
             return names.get(number);
         }
-        throw new RuntimeException("number not found"); // TODO: 5/12/2025 not best practice
+        logger.error("Name couldn't be found for number: " + number);
+        return null;
     }
 
     public int getNumberByName(String targetName) {
@@ -32,7 +35,8 @@ public final class Type {
             if (targetName.equals(names.get(i)))
                 return i;
         }
-        throw new RuntimeException("name not found"); // TODO: 5/12/2025 not best practice
+        logger.error("Number couldn't be found for type: " + targetName);
+        return -1;
     }
 
     public List<String> getNames() {

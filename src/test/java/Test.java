@@ -1,4 +1,4 @@
-import app.dns.Charts;
+import app.dns.model.util.jchart.Charts;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import org.xbill.DNS.*;
@@ -6,18 +6,83 @@ import org.xbill.DNS.Record;
 
 import javax.swing.*;
 import java.io.*;
-import java.net.InetSocketAddress;
-import java.net.Socket;
+import java.net.*;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Properties;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Test {
+    @org.junit.jupiter.api.Test
+    void testAsync() throws TextParseException, UnknownHostException, ExecutionException, InterruptedException {
+        Record queryRecord = Record.newRecord(Name.fromString("ea.com."), org.xbill.DNS.Type.A, DClass.IN);
+        Message queryMessage = Message.newQuery(queryRecord);
+        Resolver r = new SimpleResolver("8.8.8.8");
+//        Instant start = Instant.now();
+        r.sendAsync(queryMessage)
+                .whenComplete(
+                        (answer, ex) -> {
+                            if (ex == null) {
+                                System.out.println(answer);
+                            } else {
+                                ex.printStackTrace();
+                            }
+                        })
+                .toCompletableFuture()
+                .get();
+//        Instant end = Instant.now();
+//        long durationMs = Duration.between(start, end).toMillis();
+
+
+        SimpleResolver resolver = new SimpleResolver("8.8.8.8");
+        Lookup lookup = new Lookup("ea.com", org.xbill.DNS.Type.A);
+        lookup.setResolver(resolver);
+        lookup.run();
+        if (lookup.getResult() == Lookup.SUCCESSFUL) {
+            System.out.println(lookup.getAnswers()[0].rdataToString());
+        }
+    }
+    @org.junit.jupiter.api.Test
+    void networkInterface() throws UnknownHostException, SocketException {
+        try {
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            while (interfaces.hasMoreElements()) {
+                NetworkInterface nif = interfaces.nextElement();
+                System.out.println("Name: " + nif.getName());
+                System.out.println("Display Name: " + nif.getDisplayName());
+                System.out.println("Is Up: " + nif.isUp());
+                System.out.println("Is Loopback: " + nif.isLoopback());
+                System.out.println("Supports Multicast: " + nif.supportsMulticast());
+                System.out.println("----------------------------------");
+            }
+        } catch (SocketException e) {
+            e.printStackTrace();
+        }
+    }
+    @org.junit.jupiter.api.Test
+    void comparePings() throws IOException {
+        Resolver resolver = new SimpleResolver("8.8.8.8");
+        Lookup lookup = new Lookup("news.ea.com", Type.A);
+//        lookup.setDefaultResolver(resolver);
+        lookup.setResolver(resolver);
+        Record[] records = lookup.run();
+        String temp = lookup.getAnswers()[0].rdataToString();
+        ProcessBuilder processBuilder = new ProcessBuilder(new String[]{"ping", "-n", "2", temp});
+        Process process = processBuilder.start();
+        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+
+        String line;
+        while ((line = reader.readLine()) != null)
+            System.out.println(line);
+
+        String[] strings = temp.split(".");
+        byte[] bytes = new byte[4];
+        for (int i=0; i<strings.length; i++)
+            bytes[i] = Byte.parseByte(strings[i]);
+        InetAddress inetAddress = InetAddress.getByAddress(bytes);
+        System.out.println("inetAddress status: " + inetAddress.isReachable(1000));
+    }
 
     @org.junit.jupiter.api.Test
     void regexTest() {
@@ -74,32 +139,42 @@ public class Test {
                         Lookup lookup = new Lookup(targetDomain, Type.A);
                         lookup.setResolver(resolver);
                         lookup.run();
-
+                        String temp = lookup.getAnswers()[0].rdataToString();
                         if (lookup.getResult() == Lookup.SUCCESSFUL) {
-                            String ip = lookup.getAnswers()[0].rdataToString();
-                            String resolveArg = targetDomain + ":443:" + ip;
 
-                            ProcessBuilder processBuilder = new ProcessBuilder(
-                                    "curl", "-I", "--max-time", "10", "--resolve", resolveArg, "https://" + targetDomain
-                            );
+                            String[] strings = temp.split(".");
+                            byte[] bytes = new byte[4];
+                            for (int i=0; i<strings.length; i++)
+                                bytes[i] = Byte.parseByte(strings[i]);
+                            InetAddress inetAddress = InetAddress.getByAddress(bytes);
+                            InetAddress inetAddress1 = InetAddress.getByName(temp);
+                            System.out.println("inetAddress using (getByAddress) status: " + inetAddress.isReachable(1000)+", DNS: "+dns+", target ip: "+temp);
+                            System.out.println("inetAddress using (getByName) status: " + inetAddress1.isReachable(1000)+", DNS: "+dns+", target ip: "+temp);
 
-                            Process process = processBuilder.start();
-
-                            BufferedReader reader = new BufferedReader(new InputStreamReader(
-                                    new SequenceInputStream(process.getInputStream(), process.getErrorStream())
-                            ));
-
-                            String line;
-                            while ((line = reader.readLine()) != null) {
-                                if (line.contains("403") || line.contains("451")) {
-                                    System.out.printf("Access restricted for domain: %s, DNS: %s \n", targetDomain, dns);
-                                    break;
-                                }
-                            }
-
-                            // Ensure the process finishes
-                            process.waitFor(15, TimeUnit.SECONDS);
-                            process.destroy();
+//                            String ip = lookup.getAnswers()[0].rdataToString();
+//                            String resolveArg = targetDomain + ":443:" + ip;
+//
+//                            ProcessBuilder processBuilder = new ProcessBuilder(
+//                                    "curl", "-I", "--max-time", "10", "--resolve", resolveArg, "https://" + targetDomain
+//                            );
+//
+//                            Process process = processBuilder.start();
+//
+//                            BufferedReader reader = new BufferedReader(new InputStreamReader(
+//                                    new SequenceInputStream(process.getInputStream(), process.getErrorStream())
+//                            ));
+//
+//                            String line;
+//                            while ((line = reader.readLine()) != null) {
+//                                if (line.contains("403") || line.contains("451")) {
+//                                    System.out.printf("Access restricted for domain: %s, DNS: %s \n", targetDomain, dns);
+//                                    break;
+//                                }
+//                            }
+//
+//                            // Ensure the process finishes
+//                            process.waitFor(15, TimeUnit.SECONDS);
+//                            process.destroy();
                         }
                     } catch (Exception e) {
                         System.err.printf("Error checking domain %s with DNS %s: %s\n", targetDomain, dns, e.getMessage());
@@ -152,11 +227,6 @@ public class Test {
                 }
             }
         }
-    }
-
-    @org.junit.jupiter.api.Test
-    void testSorting() {
-        SwingUtilities.invokeLater(() -> Charts.getInstance().generateDNSPerformanceChart());
     }
 
     @org.junit.jupiter.api.Test

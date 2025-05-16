@@ -1,5 +1,4 @@
-package app.dns.controller;
-
+package app.dns;
 
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
@@ -7,6 +6,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
+import java.security.Security;
 public class MainApp extends Application {
     @Override
     public void start(Stage primaryStage) throws Exception {
@@ -17,6 +17,8 @@ public class MainApp extends Application {
     }
 
     public static void main(String[] args) {
+        Security.setProperty("networkaddress.cache.ttl", "0");
+        Security.setProperty("networkaddress.cache.negative.ttl", "0");
         launch(args);
     }
 }

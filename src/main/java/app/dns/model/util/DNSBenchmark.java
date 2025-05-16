@@ -1,9 +1,9 @@
-package app.dns;
+package app.dns.model.util;
 
+import app.dns.model.entity.DNSResult;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.xbill.DNS.Lookup;
-import org.xbill.DNS.SimpleResolver;
+import org.xbill.DNS.*;
 
 import java.io.*;
 import java.net.UnknownHostException;
@@ -19,9 +19,25 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class DNSBenchmark {
     private static Logger logger = LogManager.getLogger(DNSBenchmark.class);
+    private final static Properties properties = new Properties();
     private final ProgressListener listener;
     private static String OS = null;
-    private final static Properties properties = new Properties();
+
+    public DNSBenchmark() {
+        this.listener = null;
+
+        OS = System.getProperty("os.name").toLowerCase();
+
+        try (FileInputStream fileInputStream = new FileInputStream("src/main/resources/util/config.properties")) {
+            properties.load(fileInputStream);
+        } catch (FileNotFoundException e) {
+            logger.error("Configuration file not found", e);
+            throw new RuntimeException("Configuration file missing", e);
+        } catch (IOException e) {
+            logger.error("Error reading configuration file", e);
+            throw new RuntimeException("Could not read configuration file", e);
+        }
+    }
 
     public DNSBenchmark(ProgressListener listener) {
         this.listener = listener;
@@ -54,14 +70,14 @@ public class DNSBenchmark {
         }
 
         switch (serverType) {
-            case Type.EA_SERVERS:
+            case app.dns.model.entity.Type.EA_SERVERS:
                 logger.info("Loading EA domain and sub-domains.");
                 domains = properties.getProperty("EA.target_domains");
                 break;
-            case Type.MICROSOFT_SERVERS:
+            case app.dns.model.entity.Type.MICROSOFT_SERVERS:
                 logger.info("loading..");
                 break;
-            case Type.ROCKSTAR_SERVERS:
+            case app.dns.model.entity.Type.ROCKSTAR_SERVERS:
                 logger.info("loading..");
                 break;
         }
@@ -127,7 +143,6 @@ public class DNSBenchmark {
                 for (String targetDomain : domainArray) {
                     subtasks.add(() -> {
                         Lookup lookup = new Lookup(targetDomain, org.xbill.DNS.Type.A);
-                        lookup.setDefaultResolver(resolver);
                         lookup.setResolver(resolver);
                         lookup.run();
                         if (lookup.getResult() == Lookup.SUCCESSFUL) {
@@ -167,14 +182,16 @@ public class DNSBenchmark {
 
                 DNSResult dnsResult = new DNSResult(
                         dns,
-                        (double) countSuccess.get() / domainArray.length * 100,
-                        countLatency.get() == 0 ? 0.0 : (double) latency.get() / countLatency.get());
+                        (double) countLatency.get() / domainArray.length * 100,
+                        countLatency.get() == 0 ? 0.0 : (double) latency.get() / countLatency.get(),
+                        (double) countSuccess.get() / domainArray.length * 100);
                 dnsResults.add(dnsResult);
 
-                logger.info("DNS Server: {}, success percentage: {}%, avg latency: {} ms",
+                logger.info("DNS Server: {}, success percentage: {}%, avg latency: {} ms, dns lookup success percentage: {}%",
                         dnsResult.getDnsServer(),
                         String.format("%.2f", dnsResult.getSuccessPercentage()),
-                        String.format("%.2f", dnsResult.getAverageLatency()));
+                        String.format("%.2f", dnsResult.getAverageLatency()),
+                        String.format("%.2f", dnsResult.getDnsSuccessPercentage()));
             } catch (UnknownHostException e) {
                 logger.error("DNS failed: " + e.getMessage());
             } catch (InterruptedException e) {

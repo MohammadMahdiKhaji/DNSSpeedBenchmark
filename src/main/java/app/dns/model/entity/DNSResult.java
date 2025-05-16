@@ -1,19 +1,19 @@
-package app.dns;
+package app.dns.model.entity;
 
 public class DNSResult {
     private String dnsServer;
     private double successPercentage;
     private double averageLatency;
-
-    private transient double points = 0.0;
+    private double dnsSuccessPercentage;
 
     public DNSResult() {
     }
 
-    public DNSResult(String dnsServer, double successPercentage, double averageLatency) {
+    public DNSResult(String dnsServer, double successPercentage, double averageLatency, double dnsSuccessPercentage) {
         this.dnsServer = dnsServer;
         this.successPercentage = successPercentage;
         this.averageLatency = averageLatency;
+        this.dnsSuccessPercentage = dnsSuccessPercentage;
     }
 
     public String getDnsServer() {
@@ -43,12 +43,12 @@ public class DNSResult {
         return this;
     }
 
-    public double getPoints() {
-        return points;
+    public double getDnsSuccessPercentage() {
+        return dnsSuccessPercentage;
     }
 
-    public DNSResult setPoints(double points) {
-        this.points = points;
+    public DNSResult setDnsSuccessPercentage(double dnsSuccessPercentage) {
+        this.dnsSuccessPercentage = dnsSuccessPercentage;
         return this;
     }
 
@@ -58,7 +58,7 @@ public class DNSResult {
                 "dnsServer='" + dnsServer + '\'' +
                 ", successPercentage=" + successPercentage +
                 ", averageLatency=" + averageLatency +
-                ", points=" + points +
+                ", dnsSuccessPercentage=" + dnsSuccessPercentage +
                 '}';
     }
 }
