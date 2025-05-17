@@ -3,19 +3,12 @@ package app.dns.model.util;
 import app.dns.model.entity.DNSResult;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.xbill.DNS.*;
 
 import java.io.*;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class DNSBenchmark {
     private static Logger logger = LogManager.getLogger(DNSBenchmark.class);
@@ -28,7 +21,7 @@ public class DNSBenchmark {
 
         OS = System.getProperty("os.name").toLowerCase();
 
-        try (FileInputStream fileInputStream = new FileInputStream("src/main/resources/util/config.properties")) {
+        try (FileInputStream fileInputStream = new FileInputStream("src/main/resources/config.properties")) {
             properties.load(fileInputStream);
         } catch (FileNotFoundException e) {
             logger.error("Configuration file not found", e);
@@ -44,7 +37,7 @@ public class DNSBenchmark {
 
         OS = System.getProperty("os.name").toLowerCase();
 
-        try (FileInputStream fileInputStream = new FileInputStream("src/main/resources/util/config.properties")) {
+        try (FileInputStream fileInputStream = new FileInputStream("src/main/resources/config.properties")) {
             properties.load(fileInputStream);
         } catch (FileNotFoundException e) {
             logger.error("Configuration file not found", e);
@@ -124,79 +117,61 @@ public class DNSBenchmark {
         return null;
     }
 
-    AtomicInteger progressCount = new AtomicInteger(0);
+    int countProgress = 0;
 
-    private  List<DNSResult> testDNSPerformance(String[] dnsArray, String[] domainArray, int packetCount) {
+    private List<DNSResult> testDNSPerformance(String[] dnsArray, String[] domainArray, int packetCount) {
+
         List<DNSResult> dnsResults = new ArrayList<>();
+
         for (String dns : dnsArray) {
             logger.info("Starting benchmark for DNS resolver: {}", dns);
+            int latency = 0;
+            int countSuccess = 0;
+            int countLatency = 0;
 
-            AtomicInteger latency = new AtomicInteger(0);
-            AtomicInteger countSuccess = new AtomicInteger(0);
-            AtomicInteger countLatency = new AtomicInteger(0);
+            List<BenchmarkThread> benchmarkThreads = new ArrayList<>();
+            List<Thread> threads = new ArrayList<>();
 
-            ExecutorService subExecutor = Executors.newFixedThreadPool(domainArray.length);
-            List<Callable<Void>> subtasks = new ArrayList<>();
-
-            try {
-                SimpleResolver resolver = new SimpleResolver(dns);
-                for (String targetDomain : domainArray) {
-                    subtasks.add(() -> {
-                        Lookup lookup = new Lookup(targetDomain, org.xbill.DNS.Type.A);
-                        lookup.setResolver(resolver);
-                        lookup.run();
-                        if (lookup.getResult() == Lookup.SUCCESSFUL) {
-                            try {
-                                ProcessBuilder processBuilder = new ProcessBuilder(pingCMD(lookup.getAnswers()[0].rdataToString(), packetCount));
-                                Process process = processBuilder.start();
-                                BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-
-                                String line;
-                                while ((line = reader.readLine()) != null) {
-                                    if (OS.contains("win") && line.contains("Average =")) {
-                                        int avgIndex = line.indexOf("Average =") + "Average =".length();
-                                        String avg = line.substring(avgIndex).replaceAll("[^\\d]", "");
-                                        latency.addAndGet(Integer.parseInt(avg));
-                                        countLatency.incrementAndGet();
-                                    } else if (OS.contains("mac") && line.contains("/avg/")) {
-                                        int avgIndex = line.indexOf("min/avg/max/stddev = ") + "min/avg/max/stddev = ".length();
-                                        String avg = line.substring(avgIndex).replaceAll("^\\d+\\.\\d+/|(\\d+\\.\\d+)/\\d+\\.\\d+/\\d+\\.\\d+ ms$", "$1");
-                                        latency.addAndGet((int) Math.round(Double.parseDouble(avg)));
-                                        countLatency.incrementAndGet();
-                                    }
-                                }
-                                process.waitFor(10, TimeUnit.SECONDS);
-                                process.destroy();
-                            } catch (Exception e) {
-                                logger.error("Ping failed: " + e.getMessage());
-                            } finally {
-                                countSuccess.incrementAndGet();
-                            }
-                        }
-                        listener.updateProgress((double) progressCount.incrementAndGet() / (dnsArray.length * domainArray.length));
-                        return null;
-                    });
-                }
-                subExecutor.invokeAll(subtasks);
-                subExecutor.shutdown();
-
-                DNSResult dnsResult = new DNSResult(
-                        dns,
-                        (double) countLatency.get() / domainArray.length * 100,
-                        countLatency.get() == 0 ? 0.0 : (double) latency.get() / countLatency.get(),
-                        (double) countSuccess.get() / domainArray.length * 100);
-                dnsResults.add(dnsResult);
-
-                logger.info("DNS Server: {}, success percentage: {}%, avg latency: {} ms, dns lookup success percentage: {}%",
-                        dnsResult.getDnsServer(),
-                        String.format("%.2f", dnsResult.getSuccessPercentage()),
-                        String.format("%.2f", dnsResult.getAverageLatency()),
-                        String.format("%.2f", dnsResult.getDnsSuccessPercentage()));
-            } catch (UnknownHostException e) {
-                logger.error("DNS failed: " + e.getMessage());
-            } catch (InterruptedException e) {
-                logger.error("Task failed: " + e.getMessage());
+            for (String targetDomain : domainArray) {
+                BenchmarkThread benchmarkThread = new BenchmarkThread(targetDomain, dns, packetCount, OS);
+                Thread thread = new Thread(benchmarkThread);
+                threads.add(thread);
+                benchmarkThreads.add(benchmarkThread);
+                thread.start();
             }
+
+            for (Thread thread : threads) {
+                try {
+                    thread.join();
+                    countProgress++;
+                    listener.updateProgress((double) countProgress / (dnsArray.length * domainArray.length));
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            for (BenchmarkThread benchmarkThread : benchmarkThreads) {
+                if (benchmarkThread.isDnsSuccessful()) {
+                    countSuccess++;
+                }
+                if (benchmarkThread.isOverallSuccessful()) {
+                    countLatency++;
+                    latency += benchmarkThread.getLatency();
+                }
+            }
+
+            DNSResult dnsResult = new DNSResult(
+                    dns,
+                    (double) countLatency / domainArray.length * 100,
+                    countLatency == 0 ? 0.0 : (double) latency / countLatency,
+                    (double) countSuccess / domainArray.length * 100);
+            dnsResults.add(dnsResult);
+
+            logger.info("DNS Server: {}, success percentage: {}%, avg latency: {} ms, dns lookup success percentage: {}%",
+                    dnsResult.getDnsServer(),
+                    String.format("%.2f", dnsResult.getSuccessPercentage()),
+                    String.format("%.2f", dnsResult.getAverageLatency()),
+                    String.format("%.2f", dnsResult.getDnsSuccessPercentage()));
         }
         return dnsResults;
     }

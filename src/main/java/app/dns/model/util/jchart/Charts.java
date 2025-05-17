@@ -80,10 +80,10 @@ public class Charts {
         ChartPanel chartPanel = new ChartPanel(chart);
 
         JFrame frame = new JFrame("DNS Benchmark Visualization");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         frame.add(chartPanel);
         frame.setSize(800, 800);
-        frame.setLocationRelativeTo(null);
+        frame.setVisible(true);
         chartPanel.addChartMouseListener(new org.jfree.chart.ChartMouseListener() {
             @Override
             public void chartMouseClicked(org.jfree.chart.ChartMouseEvent event) {
@@ -105,7 +105,5 @@ public class Charts {
             @Override
             public void chartMouseMoved(ChartMouseEvent chartMouseEvent) {}
         });
-        frame.setVisible(true);
     }
-
 }

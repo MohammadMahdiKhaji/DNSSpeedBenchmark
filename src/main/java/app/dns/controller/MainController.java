@@ -4,6 +4,7 @@ import app.dns.model.util.jchart.Charts;
 import app.dns.model.util.DNSBenchmark;
 import app.dns.model.util.ProgressListener;
 import app.dns.model.entity.Type;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -11,7 +12,6 @@ import javafx.scene.control.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import javax.swing.*;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -51,7 +51,7 @@ public class MainController {
     }
 
     public MainController() throws IOException {
-        FileInputStream fileInputStream = new FileInputStream("src/main/resources/util/config.properties");
+        FileInputStream fileInputStream = new FileInputStream("src/main/resources/config.properties");
         properties.load(fileInputStream);
     }
 
@@ -134,6 +134,6 @@ public class MainController {
                 progressBar.setProgress(progress);
             }
         });
-        SwingUtilities.invokeLater(() -> Charts.getInstance().generateDNSPerformanceChart(dnsBenchmark.execute(domainType, packetCountSelector.getValue())));
+        Platform.runLater(() -> Charts.getInstance().generateDNSPerformanceChart(dnsBenchmark.execute(domainType, packetCountSelector.getValue())));
     }
 }
