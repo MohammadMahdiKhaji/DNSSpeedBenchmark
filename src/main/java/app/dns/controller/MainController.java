@@ -14,6 +14,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -51,8 +52,8 @@ public class MainController {
     }
 
     public MainController() throws IOException {
-        FileInputStream fileInputStream = new FileInputStream("src/main/resources/config.properties");
-        properties.load(fileInputStream);
+        InputStream inputStream = getClass().getResourceAsStream("/config.properties");
+        properties.load(inputStream);
     }
 
 

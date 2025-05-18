@@ -21,8 +21,8 @@ public class DNSBenchmark {
 
         OS = System.getProperty("os.name").toLowerCase();
 
-        try (FileInputStream fileInputStream = new FileInputStream("src/main/resources/config.properties")) {
-            properties.load(fileInputStream);
+        try (InputStream inputStream = getClass().getResourceAsStream("/config.properties")) {
+            properties.load(inputStream);
         } catch (FileNotFoundException e) {
             logger.error("Configuration file not found", e);
             throw new RuntimeException("Configuration file missing", e);
@@ -37,8 +37,8 @@ public class DNSBenchmark {
 
         OS = System.getProperty("os.name").toLowerCase();
 
-        try (FileInputStream fileInputStream = new FileInputStream("src/main/resources/config.properties")) {
-            properties.load(fileInputStream);
+        try (InputStream inputStream = getClass().getResourceAsStream("/config.properties")) {
+            properties.load(inputStream);
         } catch (FileNotFoundException e) {
             logger.error("Configuration file not found", e);
             throw new RuntimeException("Configuration file missing", e);

@@ -1,4 +1,4 @@
-package app.dns;
+package app.dns.model;
 
 import app.dns.model.entity.Type;
 import app.dns.model.util.DNSBenchmark;
