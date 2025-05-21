@@ -2,10 +2,7 @@ package app.dns.model.util;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.xbill.DNS.Lookup;
-import org.xbill.DNS.Resolver;
-import org.xbill.DNS.SimpleResolver;
-import org.xbill.DNS.TextParseException;
+import org.xbill.DNS.*;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -15,27 +12,27 @@ import java.net.UnknownHostException;
 
 public class BenchmarkThread implements Runnable {
     private static Logger logger = LogManager.getLogger(BenchmarkThread.class);
-
     private String targetDomain;
     private String dns;
     private int packetCount;
     private String OS;
     private int latency;
-    private boolean overallSuccessful = false;
-    private boolean dnsSuccessful = false;
+    private boolean overallSuccessful;
+    private boolean dnsSuccessful;
 
     public BenchmarkThread(String targetDomain, String dns, int packetCount, String OS) {
         this.targetDomain = targetDomain;
         this.dns = dns;
         this.packetCount = packetCount;
-        this.OS = OS.toLowerCase();
+        this.OS = OS;
+        this.overallSuccessful = false;
+        this.dnsSuccessful = false;
     }
     @Override
     public void run() {
-        String targetIP = null;
         try {
             logger.info("Starting benchmark for domain: {}; using DNS: {}", targetDomain, dns);
-            targetIP = lookup(targetDomain, dns);
+            String targetIP  = lookup(targetDomain, dns);
             if (targetIP != null) {
                 ProcessBuilder processBuilder = new ProcessBuilder(pingCMD(targetIP, packetCount, OS));
                 Process process = processBuilder.start();
@@ -58,10 +55,12 @@ public class BenchmarkThread implements Runnable {
 
     public String lookup(String targetDomain, String dns) throws UnknownHostException, TextParseException {
         Resolver resolver = new SimpleResolver(dns);
-        Lookup lookup = new Lookup(targetDomain, org.xbill.DNS.Type.A);
+        Lookup lookup = new Lookup(targetDomain, Type.A, DClass.IN);
+        lookup.setDefaultCache(null, DClass.IN);
         lookup.setResolver(resolver);
         lookup.run();
         if (lookup.getResult() == Lookup.SUCCESSFUL) {
+            logger.info("Lookup result using DNS: {}, and Domain: {}: {}", dns, targetDomain, lookup.getAnswers()[0].rdataToString());
             dnsSuccessful = true;
             return lookup.getAnswers()[0].rdataToString();
         }
@@ -94,7 +93,6 @@ public class BenchmarkThread implements Runnable {
         }
         return null;
     }
-
     public boolean isOverallSuccessful() {
         return overallSuccessful;
     }

@@ -3,6 +3,7 @@ package app.dns.model.util.jchart;
 import app.dns.model.entity.DNSResult;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartMouseEvent;
+import org.jfree.chart.ChartMouseListener;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.entity.ChartEntity;
@@ -19,9 +20,10 @@ import java.util.*;
 import java.util.List;
 
 public class Charts {
-    private List<DNSResult> resultsSortedGlobal;
     private static final Charts charts = new Charts();
-    private Charts() {}
+
+    private Charts() {
+    }
 
     public static Charts getInstance() {
         return charts;
@@ -30,14 +32,24 @@ public class Charts {
     public void generateDNSPerformanceChart(List<DNSResult> resultsUnsorted) {
         resultChart(sortedResults(resultsUnsorted));
     }
+
     private List<DNSResult> sortedResults(List<DNSResult> resultsUnsorted) {
         resultsUnsorted.sort(Comparator
                 .comparingDouble(DNSResult::getSuccessPercentage).reversed()
                 .thenComparingDouble(DNSResult::getAverageLatency));
         return resultsUnsorted;
     }
+
     private void resultChart(List<DNSResult> resultsSorted) {
-        this.resultsSortedGlobal = resultsSorted;
+
+        double adjustment=0.1;
+        for (int i = 0; i < resultsSorted.size() - 1; i++) {
+            if (isOverlapping(resultsSorted.get(i), resultsSorted.get(i + 1))) {
+//                adjustment+=0.1;
+                resultsSorted.get(i+1).setSuccessPercentage(resultsSorted.get(i+1).getSuccessPercentage() - adjustment);
+            }
+        }
+
         XYSeries series = new XYSeries("DNS Servers", false, true);
         for (int i = 0; i < resultsSorted.size(); i++) {
             series.add(resultsSorted.get(i).getSuccessPercentage(), resultsSorted.get(i).getAverageLatency());
@@ -84,13 +96,13 @@ public class Charts {
         frame.add(chartPanel);
         frame.setSize(800, 800);
         frame.setVisible(true);
-        chartPanel.addChartMouseListener(new org.jfree.chart.ChartMouseListener() {
+        chartPanel.addChartMouseListener(new ChartMouseListener() {
             @Override
-            public void chartMouseClicked(org.jfree.chart.ChartMouseEvent event) {
+            public void chartMouseClicked(ChartMouseEvent event) {
                 ChartEntity entity = event.getEntity();
                 if (entity instanceof XYItemEntity itemEntity) {
                     int itemIndex = itemEntity.getItem();
-                    DNSResult result = resultsSortedGlobal.get(itemIndex);
+                    DNSResult result = resultsSorted.get(itemIndex);
                     JOptionPane.showMessageDialog(null,
                             String.format("DNS Server: %s\nSuccess: %.2f%%\nLatency: %.2f ms\nLookup Success: %.2f%%",
                                     result.getDnsServer(),
@@ -103,7 +115,16 @@ public class Charts {
             }
 
             @Override
-            public void chartMouseMoved(ChartMouseEvent chartMouseEvent) {}
+            public void chartMouseMoved(ChartMouseEvent chartMouseEvent) {
+            }
         });
+    }
+
+    public boolean isOverlapping(DNSResult firstDot, DNSResult secondDot) {
+        if (firstDot.getAverageLatency() == secondDot.getAverageLatency() &&
+                firstDot.getSuccessPercentage() == secondDot.getSuccessPercentage()) {
+            return true;
+        }
+        return false;
     }
 }

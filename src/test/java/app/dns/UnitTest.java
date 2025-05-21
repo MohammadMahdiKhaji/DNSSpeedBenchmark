@@ -1,19 +1,66 @@
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
+package app.dns;
+
+import org.junit.jupiter.api.Test;
 import org.xbill.DNS.*;
-import org.xbill.DNS.Record;
 
 import java.io.*;
-import java.net.*;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.net.UnknownHostException;
+import java.util.Arrays;
+import java.util.Properties;
 
-public class Test {
 
+public class UnitTest {
+
+//    @Test
+//    void tstLookup() throws TextParseException, UnknownHostException {
+//        Resolver resolver = new SimpleResolver("10.202.10.10");
+//        Lookup lookup = new Lookup("update.discord.com", org.xbill.DNS.Type.A, DClass.IN);
+////        lookup.setDefaultCache(null, DClass.IN);
+////        lookup.setCache(null);
+//        lookup.setResolver(resolver);
+//        lookup.run();
+//        if (lookup.getResult() == Lookup.SUCCESSFUL) {
+//            System.out.println(lookup.getAnswers()[0].rdataToString());
+//        } else {
+//            System.out.println("It failed");
+//        }
+//    }
 //    @org.junit.jupiter.api.Test
+//    void testSplit() throws IOException {
+//        FileInputStream fileInputStream = new FileInputStream("src/main/resources/config.properties");
+//        Properties properties = new Properties();
+//        properties.load(fileInputStream);
+//
+//        String dnsResolvers = properties.getProperty("DNS.resolvers");
+//        if (dnsResolvers == null || dnsResolvers.isBlank()) {
+//            System.out.println("No DNS resolvers found.");
+//            return;
+//        }
+//
+//        String[] dnsArray = Arrays.stream(dnsResolvers.split(","))
+//                .map(String::trim)
+//                .filter(s -> !s.isEmpty())
+//                .toArray(String[]::new);
+//
+//        for (String dns : dnsArray) {
+//            String[] strings = dns.split("\\.");
+//            byte[] bytes = new byte[strings.length];
+//            for (int i = 0; i < strings.length; i++) {
+//                try {
+//                    int val = Integer.parseInt(strings[i]);
+//                    if (val < 0 || val > 255) {
+//                        throw new NumberFormatException("Out of range");
+//                    }
+//                    bytes[i] = (byte) val; // cast safely
+//                    System.out.print(bytes[i] + " "); // print unsigned value
+//                } catch (NumberFormatException e) {
+//                    System.err.println("Invalid byte value in DNS address: " + strings[i]);
+//                }
+//            }
+//            System.out.println();
+//        }
+//    }
+//    @org.junit.jupiter.api.app.dns.UnitTest
 //    void testAsync() throws TextParseException, UnknownHostException, ExecutionException, InterruptedException {
 //        Record queryRecord = Record.newRecord(Name.fromString("ea.com."), org.xbill.DNS.Type.A, DClass.IN);
 //        Message queryMessage = Message.newQuery(queryRecord);
@@ -42,7 +89,7 @@ public class Test {
 //            System.out.println(lookup.getAnswers()[0].rdataToString());
 //        }
 //    }
-//    @org.junit.jupiter.api.Test
+//    @org.junit.jupiter.api.app.dns.UnitTest
 //    void networkInterface() throws UnknownHostException, SocketException {
 //        try {
 //            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
@@ -59,7 +106,7 @@ public class Test {
 //            e.printStackTrace();
 //        }
 //    }
-//    @org.junit.jupiter.api.Test
+//    @org.junit.jupiter.api.app.dns.UnitTest
 //    void comparePings() throws IOException {
 //        Resolver resolver = new SimpleResolver("8.8.8.8");
 //        Lookup lookup = new Lookup("news.ea.com", Type.A);
@@ -83,7 +130,7 @@ public class Test {
 //        System.out.println("inetAddress status: " + inetAddress.isReachable(1000));
 //    }
 //
-//    @org.junit.jupiter.api.Test
+//    @org.junit.jupiter.api.app.dns.UnitTest
 //    void regexTest() {
 //
 //        String avg = "0.119/0.130/0.144/0.010 ms";
@@ -92,7 +139,7 @@ public class Test {
 //        System.out.println(avg);
 //    }
 //
-//    @org.junit.jupiter.api.Test
+//    @org.junit.jupiter.api.app.dns.UnitTest
 //    void lambdaEventTest() {
 //        EventHandler<ActionEvent> event = new EventHandler<ActionEvent>() {
 //            @Override
@@ -105,7 +152,7 @@ public class Test {
 //
 //        event.handle(fakeEvent);
 //    }
-//    @org.junit.jupiter.api.Test
+//    @org.junit.jupiter.api.app.dns.UnitTest
 //    void iranAccessTest() throws IOException, InterruptedException {
 //        FileInputStream fileInputStream = new FileInputStream("src/main/resources/util/config.properties");
 //        Properties properties = new Properties();
@@ -188,7 +235,7 @@ public class Test {
 //        subExecutor.awaitTermination(2, TimeUnit.MINUTES);
 //    }
 //
-//    @org.junit.jupiter.api.Test
+//    @org.junit.jupiter.api.app.dns.UnitTest
 //    void checkDNSType() throws IOException {
 //        FileInputStream fileInputStream = new FileInputStream("src/main/resources/util/config.properties");
 //        Properties properties = new Properties();
@@ -228,7 +275,7 @@ public class Test {
 //        }
 //    }
 //
-//    @org.junit.jupiter.api.Test
+//    @org.junit.jupiter.api.app.dns.UnitTest
 //    void test() throws IOException {
 //        String ipAddress = "159.153.204.0:8654";
 //        System.out.printf("requesting: %s \n", ipAddress);
@@ -241,7 +288,7 @@ public class Test {
 //
 //    }
 //
-//    @org.junit.jupiter.api.Test
+//    @org.junit.jupiter.api.app.dns.UnitTest
 //    void tmp() {
 //        String dns1 = "159.153.0.1";
 //        String dns2 = "159.153.0.2";
@@ -249,7 +296,7 @@ public class Test {
 //        System.out.println(Arrays.toString(dnsServers));
 //    }
 //
-//    @org.junit.jupiter.api.Test
+//    @org.junit.jupiter.api.app.dns.UnitTest
 //    void testJVM() throws IOException, InterruptedException {
 //
 //        String dns1 = "78.157.42.100";
@@ -291,7 +338,7 @@ public class Test {
 //        process1.destroy();
 //    }
 //
-//    @org.junit.jupiter.api.Test
+//    @org.junit.jupiter.api.app.dns.UnitTest
 //    void dnsJava() throws IOException, ExecutionException, InterruptedException {
 //
 ////        int count = 0;

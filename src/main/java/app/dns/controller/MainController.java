@@ -1,18 +1,18 @@
 package app.dns.controller;
 
+import app.dns.model.entity.DNSResult;
+import app.dns.model.util.ProgressListener;
 import app.dns.model.util.jchart.Charts;
 import app.dns.model.util.DNSBenchmark;
-import app.dns.model.util.ProgressListener;
 import app.dns.model.entity.Type;
-import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -35,7 +35,6 @@ public class MainController {
     private ProgressBar progressBar;
     @FXML
     private Spinner<Integer> packetCountSelector;
-
     @FXML
     public void initialize() {
         ObservableList<String> dns = FXCollections.observableArrayList(loadDNSFromConfig());
@@ -95,11 +94,13 @@ public class MainController {
                 logger.info("Loading EA domain and sub-domains.");
                 domains = properties.getProperty("EA.target_domains");
                 break;
-            case Type.MICROSOFT_SERVERS:
-                logger.info("loading..");
+            case Type.SPOTIFY_SERVERS:
+                logger.info("Loading Spotify domain and sub-domains.");
+                domains = properties.getProperty("Spotify.target_domains");
                 break;
-            case Type.ROCKSTAR_SERVERS:
-                logger.info("loading..");
+            case Type.DISCORD_SERVERS:
+                logger.info("Loading Discord domain and sub-domains.");
+                domains = properties.getProperty("Discord.target_domains");
                 break;
         }
 
@@ -128,13 +129,54 @@ public class MainController {
             return;
         }
 
-        logger.info("Starting...........");
-        DNSBenchmark dnsBenchmark = new DNSBenchmark(new ProgressListener() {
+        logger.info("Starting benchmark...");
+        startBenchmarkButton.setDisable(true);
+
+        Task<List<DNSResult>> benchmarkTask = new Task<>() {
             @Override
-            public void updateProgress(double progress) {
-                progressBar.setProgress(progress);
+            protected List<DNSResult> call() throws Exception {
+                DNSBenchmark dnsBenchmark = new DNSBenchmark(new ProgressListener() {
+                    @Override
+                    public void updateTaskProgress(double progress) {
+                        updateProgress(progress, 1.0);
+                        logger.info("progress: {}", progress * 100);
+                    }
+                });
+                return dnsBenchmark.execute(domainType, packetCountSelector.getValue());
             }
-        });
-        Platform.runLater(() -> Charts.getInstance().generateDNSPerformanceChart(dnsBenchmark.execute(domainType, packetCountSelector.getValue())));
+
+            @Override
+            protected void succeeded() {
+                super.succeeded();
+                List<DNSResult> results = getValue();
+                Charts.getInstance().generateDNSPerformanceChart(results);
+                startBenchmarkButton.setDisable(false);
+                updateProgress(0.0, 1.0);
+            }
+
+            @Override
+            protected void failed() {
+                super.failed();
+                Throwable error = getException();
+                logger.error("Benchmark failed: ", error);
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle("Error");
+                alert.setHeaderText("Benchmark Failed");
+                alert.setContentText("An error occurred during the benchmark: " + error.getMessage());
+                alert.showAndWait();
+                startBenchmarkButton.setDisable(false);
+            }
+
+            @Override
+            protected void updateProgress(double workDone, double max) {
+                super.updateProgress(workDone, max);
+            }
+        };
+
+        progressBar.progressProperty().bind(benchmarkTask.progressProperty());
+
+        Thread thread = new Thread(benchmarkTask);
+        thread.setDaemon(true); // Allow the application to exit even if this thread is running
+        thread.start();
     }
 }

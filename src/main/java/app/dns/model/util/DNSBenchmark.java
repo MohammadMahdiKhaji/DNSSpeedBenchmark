@@ -1,6 +1,7 @@
 package app.dns.model.util;
 
 import app.dns.model.entity.DNSResult;
+import app.dns.model.entity.Type;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -13,27 +14,11 @@ import java.util.Properties;
 public class DNSBenchmark {
     private static Logger logger = LogManager.getLogger(DNSBenchmark.class);
     private final static Properties properties = new Properties();
-    private final ProgressListener listener;
-    private static String OS = null;
+    private String OS;
+    private ProgressListener progressListener;
 
-    public DNSBenchmark() {
-        this.listener = null;
-
-        OS = System.getProperty("os.name").toLowerCase();
-
-        try (InputStream inputStream = getClass().getResourceAsStream("/config.properties")) {
-            properties.load(inputStream);
-        } catch (FileNotFoundException e) {
-            logger.error("Configuration file not found", e);
-            throw new RuntimeException("Configuration file missing", e);
-        } catch (IOException e) {
-            logger.error("Error reading configuration file", e);
-            throw new RuntimeException("Could not read configuration file", e);
-        }
-    }
-
-    public DNSBenchmark(ProgressListener listener) {
-        this.listener = listener;
+    public DNSBenchmark(ProgressListener progressListener) {
+        this.progressListener = progressListener;
 
         OS = System.getProperty("os.name").toLowerCase();
 
@@ -67,11 +52,13 @@ public class DNSBenchmark {
                 logger.info("Loading EA domain and sub-domains.");
                 domains = properties.getProperty("EA.target_domains");
                 break;
-            case app.dns.model.entity.Type.MICROSOFT_SERVERS:
-                logger.info("loading..");
+            case Type.SPOTIFY_SERVERS:
+                logger.info("Loading Spotify domain and sub-domains.");
+                domains = properties.getProperty("Spotify.target_domains");
                 break;
-            case app.dns.model.entity.Type.ROCKSTAR_SERVERS:
-                logger.info("loading..");
+            case Type.DISCORD_SERVERS:
+                logger.info("Loading Discord domain and sub-domains.");
+                domains = properties.getProperty("Discord.target_domains");
                 break;
         }
 
@@ -82,7 +69,7 @@ public class DNSBenchmark {
                     .filter(s -> !s.isEmpty())
                     .toArray(String[]::new);
             if (flushCache()) {
-                return testDNSPerformance(dnsArray, domainArray, packetCount);
+                return testDNSPerformance(dnsArray, domainArray, packetCount, OS);
             }
         } else {
             logger.error("target_domains not found in config.");
@@ -107,71 +94,13 @@ public class DNSBenchmark {
         return false;
     }
 
-    private String[] pingCMD(String ip, int packetCount) {
-        if (OS.contains("win")) {
-            return new String[]{"ping", "-n", String.valueOf(packetCount), ip};
-        } else if (OS.contains("mac")) {
-            return new String[]{"ping", "-c", String.valueOf(packetCount), ip};
-        }
-        logger.error("Creating ping command failed.");
-        return null;
-    }
-
-    int countProgress = 0;
-
-    private List<DNSResult> testDNSPerformance(String[] dnsArray, String[] domainArray, int packetCount) {
-
+    private List<DNSResult> testDNSPerformance(String[] dnsArray, String[] domainArray, int packetCount, String operatingSystem) {
         List<DNSResult> dnsResults = new ArrayList<>();
 
-        for (String dns : dnsArray) {
-            logger.info("Starting benchmark for DNS resolver: {}", dns);
-            int latency = 0;
-            int countSuccess = 0;
-            int countLatency = 0;
-
-            List<BenchmarkThread> benchmarkThreads = new ArrayList<>();
-            List<Thread> threads = new ArrayList<>();
-
-            for (String targetDomain : domainArray) {
-                BenchmarkThread benchmarkThread = new BenchmarkThread(targetDomain, dns, packetCount, OS);
-                Thread thread = new Thread(benchmarkThread);
-                threads.add(thread);
-                benchmarkThreads.add(benchmarkThread);
-                thread.start();
-            }
-
-            for (Thread thread : threads) {
-                try {
-                    thread.join();
-                    countProgress++;
-                    listener.updateProgress((double) countProgress / (dnsArray.length * domainArray.length));
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-
-            for (BenchmarkThread benchmarkThread : benchmarkThreads) {
-                if (benchmarkThread.isDnsSuccessful()) {
-                    countSuccess++;
-                }
-                if (benchmarkThread.isOverallSuccessful()) {
-                    countLatency++;
-                    latency += benchmarkThread.getLatency();
-                }
-            }
-
-            DNSResult dnsResult = new DNSResult(
-                    dns,
-                    (double) countLatency / domainArray.length * 100,
-                    countLatency == 0 ? 0.0 : (double) latency / countLatency,
-                    (double) countSuccess / domainArray.length * 100);
-            dnsResults.add(dnsResult);
-
-            logger.info("DNS Server: {}, success percentage: {}%, avg latency: {} ms, dns lookup success percentage: {}%",
-                    dnsResult.getDnsServer(),
-                    String.format("%.2f", dnsResult.getSuccessPercentage()),
-                    String.format("%.2f", dnsResult.getAverageLatency()),
-                    String.format("%.2f", dnsResult.getDnsSuccessPercentage()));
+        for (int i=0; i<dnsArray.length; i++) {
+            logger.info("Starting benchmark for DNS resolver: {}", dnsArray[i]);
+            BenchmarkRunner runner = new BenchmarkRunner(progressListener);
+            dnsResults.add(runner.executeDNSTest(dnsArray[i], dnsArray.length, domainArray, packetCount, operatingSystem));
         }
         return dnsResults;
     }
