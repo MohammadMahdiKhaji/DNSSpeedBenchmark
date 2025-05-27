@@ -31,9 +31,19 @@ jobs:
     - name: Execute Gradle build
       run: ./gradlew build
 
-    - name: Upload test results
-      if: always()
+    - name: Create jlink image
+      run: ./gradlew jlink
+
+    - name: Zip custom runtime image
+      run: |
+        if [ "$RUNNER_OS" == "Linux" ] || [ "$RUNNER_OS" == "macOS" ]; then
+          zip -r custom-runtime.zip build/image
+        else
+          powershell -Command "Compress-Archive -Path build/image/* -DestinationPath custom-runtime.zip"
+        fi
+
+    - name: Upload custom runtime image
       uses: actions/upload-artifact@v4
       with:
-        name: test-results-${{ matrix.os }}
-        path: build/test-results/test
+        name: jlink-runtime-${{ matrix.os }}
+        path: custom-runtime.zip
