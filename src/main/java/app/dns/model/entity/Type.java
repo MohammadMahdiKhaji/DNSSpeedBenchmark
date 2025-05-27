@@ -8,21 +8,21 @@ import java.util.List;
 
 public final class Type {
     private static Logger logger = LogManager.getLogger(Type.class);
-    public static final int EA_SERVERS = 0;
-    public static final int SPOTIFY_SERVERS = 1;
-    public static final int DISCORD_SERVERS = 2;
+    public static final int EA_DOMAINS = 0;
+    public static final int SPOTIFY_DOMAINS = 1;
+    public static final int DISCORD_DOMAINS = 2;
     private static final List<String> names = new ArrayList<>();
 
     public Type() {
     }
 
     static {
-        names.add(0, "EA_SERVERS");
-        names.add(1, "SPOTIFY_SERVERS");
-        names.add(2, "DISCORD_SERVERS");
+        names.add(0, "EA");
+        names.add(1, "SPOTIFY");
+        names.add(2, "DISCORD");
     }
 
-    public String getNameByNumber(int number) {
+    public static String getNameByNumber(int number) {
         if (number < names.size()) {
             return names.get(number);
         }
@@ -30,7 +30,7 @@ public final class Type {
         return null;
     }
 
-    public int getNumberByName(String targetName) {
+    public static int getNumberByName(String targetName) {
         for (int i=0; i < names.size(); i++) {
             if (targetName.equals(names.get(i)))
                 return i;
@@ -39,7 +39,7 @@ public final class Type {
         return -1;
     }
 
-    public List<String> getNames() {
+    public static List<String> getNames() {
         return names;
     }
 }

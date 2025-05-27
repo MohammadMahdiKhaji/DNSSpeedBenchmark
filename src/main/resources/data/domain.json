@@ -1,0 +1,41 @@
+{
+  "domain": {
+    "DISCORD": {
+      "domains": [
+        "updates.discord.com"
+      ]
+    },
+    "SPOTIFY": {
+      "domains": [
+        "xpui.app.spotify.com",
+        "apresolve.spotify.com",
+        "gew1-spclient.spotify.com",
+        "login5.spotify.com",
+        "api.spotify.com",
+        "api-partner.spotify.com",
+        "spclient.wg.spotify.com",
+        "pixel.spotify.com",
+        "pixel-static.spotify.com",
+        "exp.wg.spotify.com",
+        "ap-gew1.spotify.com",
+        "gew1-dealer.g2.spotify.com"
+      ]
+    },
+    "EA": {
+      "domains": [
+        "confluence.ea.com",
+        "accounts.ea.com",
+        "accounts.aws-gslb.prod.ea.com",
+        "pc.ea.com",
+        "ea5.com.edgekey.net",
+        "e8688.e12.akamaiedge.net",
+        "service-aggregation-layer.juno.ea.com",
+        "ea15.com.edgekey.net",
+        "e16166.e12.akamaiedge.net",
+        "pin-river.data.ea.com",
+        "river-prod-external.eadpdata.ddns.ea.com",
+        "k8s-riverpro-captures-9f8dbb0ba5-1345960063.us-east-1.elb.amazonaws.com"
+      ]
+    }
+  }
+}

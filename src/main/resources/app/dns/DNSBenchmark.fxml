@@ -89,7 +89,7 @@
     </MenuBar>
     <AnchorPane maxHeight="-1.0" maxWidth="-1.0" prefHeight="-1.0" prefWidth="-1.0" VBox.vgrow="ALWAYS">
       <children>
-            <ListView fx:id="dnsServersView" layoutX="14.0" layoutY="20.0" prefHeight="342.0" prefWidth="220.0" AnchorPane.bottomAnchor="15.0" AnchorPane.leftAnchor="14.0" AnchorPane.topAnchor="25.0" />
+            <ListView fx:id="dnsResolversView" layoutX="14.0" layoutY="20.0" prefHeight="342.0" prefWidth="220.0" AnchorPane.bottomAnchor="15.0" AnchorPane.leftAnchor="14.0" AnchorPane.topAnchor="25.0" />
             <Button fx:id="startBenchmarkButton" layoutX="523.0" layoutY="276.0" mnemonicParsing="false" text="Start">
                <font>
                   <Font name="System Bold Italic" size="12.0" />

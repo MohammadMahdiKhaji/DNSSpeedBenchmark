@@ -9,7 +9,6 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.*;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
@@ -35,48 +34,8 @@ public class DNSBenchmark {
         }
     }
 
-    public List<DNSResult> execute(int serverType, int packetCount) {
-        String dnsResolvers = properties.getProperty("DNS.resolvers");
-        String[] dnsArray = null;
-        String domains = null;
-        if (dnsResolvers != null) {
-            dnsArray = Arrays.stream(dnsResolvers.split(","))
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty())
-                    .toArray(String[]::new);
-            logger.info("DNS loaded from config.");
-        } else {
-            logger.error("Resolvers could not be found in config.");
-        }
-
-        switch (serverType) {
-            case Type.EA_SERVERS:
-                logger.info("Loading EA domain and sub-domains.");
-                domains = properties.getProperty("EA.target_domains");
-                break;
-            case Type.SPOTIFY_SERVERS:
-                logger.info("Loading Spotify domain and sub-domains.");
-                domains = properties.getProperty("Spotify.target_domains");
-                break;
-            case Type.DISCORD_SERVERS:
-                logger.info("Loading Discord domain and sub-domains.");
-                domains = properties.getProperty("Discord.target_domains");
-                break;
-        }
-
-        final String[] domainArray;
-        if (domains != null) {
-            domainArray = Arrays.stream(domains.split(","))
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty())
-                    .toArray(String[]::new);
-            if (flushCache()) {
-                return testDNSPerformance(dnsArray, domainArray, packetCount, OS);
-            }
-        } else {
-            logger.error("target_domains not found in config.");
-        }
-        return null;
+    public List<DNSResult> execute(String[] dnsResolversAddresses, String[] domains, int packetCount) {
+        return testDNSPerformance(dnsResolversAddresses, domains, packetCount, OS);
     }
 
     private boolean flushCache() {
@@ -102,15 +61,15 @@ public class DNSBenchmark {
         return false;
     }
 
-    private List<DNSResult> testDNSPerformance(String[] dnsArray, String[] domainArray, int packetCount, String operatingSystem) {
+    private List<DNSResult> testDNSPerformance(String[] dnsAddressesArray, String[] domainArray, int packetCount, String operatingSystem) {
         List<DNSResult> dnsResults = new ArrayList<>();
         List<BenchmarkRunner> runners = new ArrayList<>();
 
-        for (int i=0; i<dnsArray.length; i++) {
-            logger.info("Starting benchmark for DNS resolver: {}", dnsArray[i]);
+        for (int i=0; i<dnsAddressesArray.length; i++) {
+            logger.info("Starting benchmark for DNS resolver: {}", dnsAddressesArray[i]);
             BenchmarkRunner runner = new BenchmarkRunner(progressListener);
             runners.add(runner);
-            runner.executeDNSTest(dnsArray[i], dnsArray.length, domainArray, packetCount, operatingSystem);
+            runner.executeDNSTest(dnsAddressesArray[i], dnsAddressesArray.length, domainArray, packetCount, operatingSystem);
         }
 
         for (BenchmarkRunner runner : runners) {

@@ -1,9 +1,10 @@
 package app.dns.controller;
 
 import app.dns.model.entity.DNSResult;
+import app.dns.model.util.JSONReader;
+import app.dns.model.util.core.DNSBenchmark;
 import app.dns.model.util.ProgressListener;
 import app.dns.model.util.jchart.Charts;
-import app.dns.model.util.DNSBenchmark;
 import app.dns.model.entity.Type;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -13,18 +14,13 @@ import javafx.scene.control.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Properties;
 
 public class MainController {
     private static Logger logger = LogManager.getLogger(MainController.class);
-    private final Properties properties = new Properties();
     @FXML
-    private ListView<String> dnsServersView;
+    private ListView<String> dnsResolversView;
     @FXML
     private ListView<String> domainsView;
     @FXML
@@ -37,8 +33,7 @@ public class MainController {
     private Spinner<Integer> packetCountSelector;
     @FXML
     public void initialize() {
-        ObservableList<String> dns = FXCollections.observableArrayList(loadDNSFromConfig());
-        dnsServersView.setItems(dns);
+        dnsResolversView.setItems(FXCollections.observableArrayList(loadDNSResolvers()));
 
         for (MenuItem item : loadDomainTypes()) {
             item.setOnAction(event -> onMenuItemSelected(item));
@@ -50,22 +45,13 @@ public class MainController {
         packetCountSelector.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 100, 1, 1));
     }
 
-    public MainController() throws IOException {
-        InputStream inputStream = getClass().getResourceAsStream("/config.properties");
-        properties.load(inputStream);
-    }
+    public MainController() {}
 
-
-    public String[] loadDNSFromConfig() {
-        String dnsResolvers = properties.getProperty("DNS.resolvers");
-        String[] dnsArray = null;
-        if (dnsResolvers != null) {
-            dnsArray = Arrays.stream(dnsResolvers.split(","))
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty())
-                    .toArray(String[]::new);
-            logger.info("DNS loaded from config.");
-            return dnsArray;
+    public String[] loadDNSResolvers() {
+        String[] ipAddresses = JSONReader.getAllDNSResolversAddresses();
+        if (ipAddresses != null) {
+            logger.info("DNS Resolvers loaded from config.");
+            return ipAddresses;
         } else {
             logger.error("Resolvers could not be found in config.");
         }
@@ -74,7 +60,7 @@ public class MainController {
 
     public List<MenuItem> loadDomainTypes() {
         List<MenuItem> menuItems = new ArrayList<>();
-        for (String string : new Type().getNames()) {
+        for (String string : Type.getNames()) {
             menuItems.add(new MenuItem(string));
         }
         return menuItems;
@@ -88,38 +74,18 @@ public class MainController {
     }
 
     public String[] filterDomainsByType(String domainType) {
-        String domains = null;
-        switch (new Type().getNumberByName(domainType)) {
-            case Type.EA_SERVERS:
-                logger.info("Loading EA domain and sub-domains.");
-                domains = properties.getProperty("EA.target_domains");
-                break;
-            case Type.SPOTIFY_SERVERS:
-                logger.info("Loading Spotify domain and sub-domains.");
-                domains = properties.getProperty("Spotify.target_domains");
-                break;
-            case Type.DISCORD_SERVERS:
-                logger.info("Loading Discord domain and sub-domains.");
-                domains = properties.getProperty("Discord.target_domains");
-                break;
-        }
-
-        final String[] domainArray;
+        String[] domains = JSONReader.getDomainsByDomainName(domainType);
         if (domains != null) {
-            domainArray = Arrays.stream(domains.split(","))
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty())
-                    .toArray(String[]::new);
             logger.info("Domains loaded from config.");
-            return domainArray;
+            return domains;
         } else {
-            logger.error("target_domains not found in config.");
+            logger.error("Domains not found in config.");
             return null;
         }
     }
 
     public void startBenchmark() {
-        int domainType = new Type().getNumberByName(menuButtonDomains.getText());
+        int domainType = Type.getNumberByName(menuButtonDomains.getText());
         if (domainType == -1) {
             Alert alert = new Alert(Alert.AlertType.WARNING);
             alert.setTitle("Missing Input");
@@ -134,7 +100,7 @@ public class MainController {
 
         Task<List<DNSResult>> benchmarkTask = new Task<>() {
             @Override
-            protected List<DNSResult> call() throws Exception {
+            protected List<DNSResult> call() {
                 DNSBenchmark dnsBenchmark = new DNSBenchmark(new ProgressListener() {
                     @Override
                     public void updateTaskProgress(double progress) {
@@ -142,7 +108,10 @@ public class MainController {
                         logger.info("progress: {}", progress * 100);
                     }
                 });
-                return dnsBenchmark.execute(domainType, packetCountSelector.getValue());
+                return dnsBenchmark.execute(
+                        JSONReader.getAllDNSResolversAddresses(),
+                        JSONReader.getDomainsByDomainName(Type.getNameByNumber(domainType)),
+                        packetCountSelector.getValue());
             }
 
             @Override
