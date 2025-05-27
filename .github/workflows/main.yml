@@ -34,13 +34,13 @@ jobs:
     - name: Create jlink image
       run: ./gradlew jlink
 
-    - name: Zip custom runtime image
-      run: |
-        if [ "$RUNNER_OS" == "Linux" ] || [ "$RUNNER_OS" == "macOS" ]; then
-          zip -r custom-runtime.zip build/image
-        else
-          powershell -Command "Compress-Archive -Path build/image/* -DestinationPath custom-runtime.zip"
-        fi
+    - name: Zip custom runtime (Linux/macOS)
+      if: runner.os != 'Windows'
+      run: zip -r custom-runtime.zip build/image
+
+    - name: Zip custom runtime (Windows)
+      if: runner.os == 'Windows'
+      run: Compress-Archive -Path build/image/* -DestinationPath custom-runtime.zip
 
     - name: Upload custom runtime image
       uses: actions/upload-artifact@v4
