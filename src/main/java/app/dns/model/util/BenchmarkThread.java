@@ -19,6 +19,7 @@ public class BenchmarkThread implements Runnable {
     private int latency;
     private boolean overallSuccessful;
     private boolean dnsSuccessful;
+    private volatile boolean done;
 
     public BenchmarkThread(String targetDomain, String dns, int packetCount, String OS) {
         this.targetDomain = targetDomain;
@@ -27,6 +28,7 @@ public class BenchmarkThread implements Runnable {
         this.OS = OS;
         this.overallSuccessful = false;
         this.dnsSuccessful = false;
+        this.done = false;
     }
     @Override
     public void run() {
@@ -44,6 +46,8 @@ public class BenchmarkThread implements Runnable {
                 }
                 process.destroy();
             }
+            done = true;
+            logger.info("Benchmark for domain: {}; using DNS resolver: {} is over", targetDomain, dns);
         } catch (UnknownHostException e) {
             logger.error("DNS failed: " + e.getMessage());
         } catch (TextParseException e) {
@@ -60,7 +64,7 @@ public class BenchmarkThread implements Runnable {
         lookup.setResolver(resolver);
         lookup.run();
         if (lookup.getResult() == Lookup.SUCCESSFUL) {
-            logger.info("Lookup result using DNS: {}, and Domain: {}: {}", dns, targetDomain, lookup.getAnswers()[0].rdataToString());
+            logger.info("Lookup result using DNS resolver: {}, and Domain: {}: {}", dns, targetDomain, lookup.getAnswers()[0].rdataToString());
             dnsSuccessful = true;
             return lookup.getAnswers()[0].rdataToString();
         }
@@ -70,7 +74,7 @@ public class BenchmarkThread implements Runnable {
     public String[] pingCMD(String ip, int packetCount, String OS) {
         if (OS.contains("win")) {
             return new String[]{"ping", "-n", String.valueOf(packetCount), ip};
-        } else if (OS.contains("mac")) {
+        } else if (OS.contains("mac") || OS.contains("nix") || OS.contains("nux")) {
             return new String[]{"ping", "-c", String.valueOf(packetCount), ip};
         }
         logger.error("Creating ping command failed.");
@@ -85,7 +89,7 @@ public class BenchmarkThread implements Runnable {
                 int avgIndex = line.indexOf("Average =") + "Average =".length();
                 String avg = line.substring(avgIndex).replaceAll("[^\\d]", "");
                 return Integer.parseInt(avg);
-            } else if (OS.contains("mac") && line.contains("/avg/")) {
+            } else if ((OS.contains("mac") || OS.contains("nix") || OS.contains("nux")) && line.contains("min/avg/max")) {
                 int avgIndex = line.indexOf("min/avg/max/stddev = ") + "min/avg/max/stddev = ".length();
                 String avg = line.substring(avgIndex).replaceAll("^\\d+\\.\\d+/|(\\d+\\.\\d+)/\\d+\\.\\d+/\\d+\\.\\d+ ms$", "$1");
                 return  ((int) Math.round(Double.parseDouble(avg)));
@@ -103,5 +107,9 @@ public class BenchmarkThread implements Runnable {
 
     public int getLatency() {
         return latency;
+    }
+
+    public boolean isDone() {
+        return done;
     }
 }

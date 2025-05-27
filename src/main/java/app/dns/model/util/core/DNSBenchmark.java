@@ -1,7 +1,9 @@
-package app.dns.model.util;
+package app.dns.model.util.core;
 
 import app.dns.model.entity.DNSResult;
 import app.dns.model.entity.Type;
+import app.dns.model.util.BenchmarkRunner;
+import app.dns.model.util.ProgressListener;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -48,7 +50,7 @@ public class DNSBenchmark {
         }
 
         switch (serverType) {
-            case app.dns.model.entity.Type.EA_SERVERS:
+            case Type.EA_SERVERS:
                 logger.info("Loading EA domain and sub-domains.");
                 domains = properties.getProperty("EA.target_domains");
                 break;
@@ -81,13 +83,19 @@ public class DNSBenchmark {
         try {
             if (OS.contains("win")) {
                 Runtime.getRuntime().exec("ipconfig /flushdns");
-                logger.info("DNS cache flushed.");
                 return true;
             } else if (OS.contains("mac")) {
-                Runtime.getRuntime().exec("sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder");
-                logger.info("DNS cache flushed on macOS.");
+                Runtime.getRuntime().exec(new String[]{
+                        "/bin/sh", "-c", "sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder"
+                });
+                return true;
+            }  else if (OS.contains("nix") || OS.contains("nux") || OS.contains("linux")) {
+                Runtime.getRuntime().exec(new String[]{
+                        "/bin/sh", "-c", "sudo systemd-resolve --flush-caches || sudo service nscd restart || sudo service dnsmasq restart || sudo systemctl restart NetworkManager"
+                });
                 return true;
             }
+            logger.info("System resolver cache flushed.");
         } catch (IOException e) {
             logger.error("Flushing failed, message : {}", e.getMessage());
         }
@@ -96,11 +104,22 @@ public class DNSBenchmark {
 
     private List<DNSResult> testDNSPerformance(String[] dnsArray, String[] domainArray, int packetCount, String operatingSystem) {
         List<DNSResult> dnsResults = new ArrayList<>();
+        List<BenchmarkRunner> runners = new ArrayList<>();
 
         for (int i=0; i<dnsArray.length; i++) {
             logger.info("Starting benchmark for DNS resolver: {}", dnsArray[i]);
             BenchmarkRunner runner = new BenchmarkRunner(progressListener);
-            dnsResults.add(runner.executeDNSTest(dnsArray[i], dnsArray.length, domainArray, packetCount, operatingSystem));
+            runners.add(runner);
+            runner.executeDNSTest(dnsArray[i], dnsArray.length, domainArray, packetCount, operatingSystem);
+        }
+
+        for (BenchmarkRunner runner : runners) {
+            while(true) {
+                if (runner.getDnsResult() != null) {
+                    dnsResults.add(runner.getDnsResult());
+                    break;
+                }
+            }
         }
         return dnsResults;
     }

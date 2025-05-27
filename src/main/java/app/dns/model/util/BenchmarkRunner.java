@@ -6,83 +6,104 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class BenchmarkRunner {
     private static Logger logger = LogManager.getLogger(BenchmarkRunner.class);
     private final static ThreadPool threadPool = new ThreadPool(5);
     private final ProgressListener listener;
-    private static AtomicInteger countProgress = new AtomicInteger(0);
-    private AtomicInteger localProgress = new AtomicInteger(0);
-    private AtomicInteger latency = new AtomicInteger(0);
-    private AtomicInteger countSuccess = new AtomicInteger(0);
-    private AtomicInteger countLatency = new AtomicInteger(0);
+    private static int overallProgress = 0;
+    private int localProgress = 0;
+    private int totalLatency = 0;
+    private int countDNSSuccess = 0;
+    private int countPingSuccess = 0;
+    private DNSResult dnsResult = new DNSResult();
 
     public BenchmarkRunner(ProgressListener listener) {
         this.listener = listener;
     }
 
-    public DNSResult executeDNSTest(String dns, int dnsSize, String[] domainArray, int packetCount, String operatingSystem) {
-
-//        for (String targetDomain : domainArray) {
-//            BenchmarkThread benchmarkThread = new BenchmarkThread(targetDomain, dns, packetCount, operatingSystem);
-//                    CompletableFuture.runAsync(benchmarkThread, threadPool).thenRun(() -> {
-//                localProgress.incrementAndGet();
-//                countProgress.incrementAndGet();
-//                listener.updateTaskProgress((double) countProgress.get() / (dnsSize * domainArray.length));
-//                if (benchmarkThread.isDnsSuccessful()) {
-//                    countSuccess.incrementAndGet();
-//                }
-//                if (benchmarkThread.isOverallSuccessful()) {
-//                    countLatency.incrementAndGet();
-//                    latency.addAndGet(benchmarkThread.getLatency());
-//                }
-//            });
-//        }
-//        while (true) {
-//            if (localProgress.get() == domainArray.length)
-//                break;
-//        }
+    public void executeDNSTest(String dns, int dnsSize, String[] domainArray, int packetCount, String operatingSystem) {
 
         List<BenchmarkThread> threads = new ArrayList<>();
-        List<CompletableFuture<Void>> futures = new ArrayList<>();
-
         for (String targetDomain : domainArray) {
             BenchmarkThread benchmarkThread = new BenchmarkThread(targetDomain, dns, packetCount, operatingSystem);
             threads.add(benchmarkThread);
-
-            CompletableFuture<Void> future = CompletableFuture.runAsync(benchmarkThread, threadPool);
-            futures.add(future);
+            threadPool.execute(benchmarkThread);
         }
-
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 
         for (BenchmarkThread benchmarkThread : threads) {
-            localProgress.incrementAndGet();
-            countProgress.incrementAndGet();
-            listener.updateTaskProgress((double) countProgress.get() / (dnsSize * domainArray.length));
+
+            while (true) {
+                if (benchmarkThread.isDone())
+                    break;
+            }
+
+            incrementLocalProgress();
+            incrementOverallProgress();
+
+            listener.updateTaskProgress((double) getOverallProgress() / (dnsSize * domainArray.length));
             if (benchmarkThread.isDnsSuccessful()) {
-                countSuccess.incrementAndGet();
+                incrementCountDNSSuccess();
             }
             if (benchmarkThread.isOverallSuccessful()) {
-                countLatency.incrementAndGet();
-                latency.addAndGet(benchmarkThread.getLatency());
+                incrementCountPingSuccess();
+                addTotalLatency(benchmarkThread.getLatency());
             }
         }
 
-        DNSResult dnsResult = new DNSResult(
-                dns,
-                (double) countLatency.get() / domainArray.length * 100,
-                countLatency.get() == 0 ? 0.0 : (double) latency.get() / countLatency.get(),
-                (double) countSuccess.get() / domainArray.length * 100);
+        dnsResult.setDnsServer(dns);
+        dnsResult.setSuccessPercentage((double) getCountPingSuccess() / domainArray.length * 100);
+        dnsResult.setAverageLatency(getCountPingSuccess() == 0 ? 0.0 : (double) getTotalLatency() / getCountPingSuccess());
+        dnsResult.setDnsSuccessPercentage((double) getCountDNSSuccess() / domainArray.length * 100);
 
-        logger.info("DNS Server: {}, success percentage: {}%, avg latency: {} ms, dns lookup success percentage: {}%",
+        logger.info("DNSResovler Server: {}, success percentage: {}%, avg latency: {} ms, dns lookup success percentage: {}%",
                 dnsResult.getDnsServer(),
                 String.format("%.2f", dnsResult.getSuccessPercentage()),
                 String.format("%.2f", dnsResult.getAverageLatency()),
                 String.format("%.2f", dnsResult.getDnsSuccessPercentage()));
+    }
 
+    public DNSResult getDnsResult() {
         return dnsResult;
+    }
+
+    public static synchronized void incrementOverallProgress() {
+        overallProgress++;
+    }
+
+    public static synchronized int getOverallProgress() {
+        return overallProgress;
+    }
+
+    public synchronized void incrementLocalProgress() {
+        localProgress++;
+    }
+
+    public synchronized int getLocalProgress() {
+        return localProgress;
+    }
+
+    public synchronized void addTotalLatency(int value) {
+        totalLatency += value;
+    }
+
+    public synchronized int getTotalLatency() {
+        return totalLatency;
+    }
+
+    public synchronized void incrementCountDNSSuccess() {
+        countDNSSuccess++;
+    }
+
+    public synchronized int getCountDNSSuccess() {
+        return countDNSSuccess;
+    }
+
+    public synchronized void incrementCountPingSuccess() {
+        countPingSuccess++;
+    }
+
+    public synchronized int getCountPingSuccess() {
+        return countPingSuccess;
     }
 }
