@@ -1,5 +1,6 @@
 package app.dns;
 
+import app.dns.model.util.jmx.JMXServer;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -19,6 +20,14 @@ public class MainApp extends Application {
     public static void main(String[] args) {
         Security.setProperty("networkaddress.cache.ttl", "0");
         Security.setProperty("networkaddress.cache.negative.ttl", "0");
+
+        System.setProperty("com.sun.management.jmxremote.port", "9999");
+        System.setProperty("com.sun.management.jmxremote.authenticate", "false");
+        System.setProperty("com.sun.management.jmxremote.ssl", "false");
+
+        JMXServer jmxServer = new JMXServer();
+        jmxServer.startJMXServer();
+
         launch(args);
     }
 }

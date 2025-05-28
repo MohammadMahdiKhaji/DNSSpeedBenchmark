@@ -6,6 +6,8 @@ module DNSSpeedBenchmark {
     requires org.dnsjava;
     requires org.jfree.jfreechart;
     requires com.fasterxml.jackson.databind;
+    requires java.management;
+    requires java.rmi;
 
     opens app.dns to javafx.fxml;
     opens app.dns.controller to javafx.fxml;
@@ -15,4 +17,5 @@ module DNSSpeedBenchmark {
     exports app.dns;
     exports app.dns.model;
     exports app.dns.model.util.core;
+    exports app.dns.model.util.jmx.mbeans;
 }

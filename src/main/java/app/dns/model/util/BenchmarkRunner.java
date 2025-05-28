@@ -9,7 +9,7 @@ import java.util.List;
 
 public class BenchmarkRunner {
     private static Logger logger = LogManager.getLogger(BenchmarkRunner.class);
-    private final static ThreadPool threadPool = new ThreadPool(5);
+    private final static ThreadPool threadPool = new ThreadPool(Runtime.getRuntime().availableProcessors());
     private final ProgressListener listener;
     private static int overallProgress = 0;
     private int localProgress = 0;
