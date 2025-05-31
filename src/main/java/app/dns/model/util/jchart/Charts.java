@@ -44,11 +44,13 @@ public class Charts {
 
         double adjustment=0.1;
         for (int i = 0; i < resultsSorted.size() - 1; i++) {
-            if (isOverlapping(resultsSorted.get(i), resultsSorted.get(i + 1))) {
-//                adjustment+=0.1;
-                resultsSorted.get(i+1).setSuccessPercentage(resultsSorted.get(i+1).getSuccessPercentage() - adjustment);
+            for (int j = i+1; j < resultsSorted.size(); j++) {
+                if (isOverlapping(resultsSorted.get(i), resultsSorted.get(j))) {
+                    resultsSorted.get(j).setSuccessPercentage(Math.max(0, resultsSorted.get(j).getSuccessPercentage() - adjustment));
+                }
             }
         }
+
 
         XYSeries series = new XYSeries("DNS Servers", false, true);
         for (int i = 0; i < resultsSorted.size(); i++) {
@@ -76,11 +78,11 @@ public class Charts {
         XYShapeRenderer renderer = new XYShapeRenderer() {
             @Override
             public Paint getItemPaint(int row, int col) {
-                String currentDNS = resultsSorted.get(col).getDnsServer();
+                DNSResult currentDNS = resultsSorted.get(col);
 
-                if (currentDNS.equals(resultsSorted.get(0).getDnsServer()) || currentDNS.equals(resultsSorted.get(1).getDnsServer())) {
+                if (currentDNS.equals(resultsSorted.get(0)) || currentDNS.equals(resultsSorted.get(1))) {
                     return Color.GREEN;
-                } else if (currentDNS.equals(resultsSorted.get(2).getDnsServer()) || currentDNS.equals(resultsSorted.get(3).getDnsServer())) {
+                } else if (currentDNS.equals(resultsSorted.get(2)) || currentDNS.equals(resultsSorted.get(3))) {
                     return Color.YELLOW;
                 } else {
                     return Color.RED;
@@ -104,8 +106,9 @@ public class Charts {
                     int itemIndex = itemEntity.getItem();
                     DNSResult result = resultsSorted.get(itemIndex);
                     JOptionPane.showMessageDialog(null,
-                            String.format("DNS Server: %s\nSuccess: %.2f%%\nLatency: %.2f ms\nLookup Success: %.2f%%",
-                                    result.getDnsServer(),
+                            String.format("First DNS Server: %s\nSecond DNS Server: %s\nSuccess: %.2f%%\nLatency: %.2f ms\nLookup Success: %.2f%%",
+                                    result.getFirstDnsServer(),
+                                    result.getSecondDnsServer(),
                                     result.getSuccessPercentage(),
                                     result.getAverageLatency(),
                                     result.getDnsSuccessPercentage()),
