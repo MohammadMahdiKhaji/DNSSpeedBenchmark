@@ -1,7 +1,8 @@
 package app.dns.model.entity;
 
 public class DNSResult {
-    private String dnsServer;
+    private String firstDnsServer;
+    private String secondDnsServer;
     private double successPercentage;
     private double averageLatency;
     private double dnsSuccessPercentage;
@@ -9,19 +10,29 @@ public class DNSResult {
     public DNSResult() {
     }
 
-    public DNSResult(String dnsServer, double successPercentage, double averageLatency, double dnsSuccessPercentage) {
-        this.dnsServer = dnsServer;
+    public DNSResult(String firstDnsServer, String secondDnsServer, double successPercentage, double averageLatency, double dnsSuccessPercentage) {
+        this.firstDnsServer = firstDnsServer;
+        this.secondDnsServer = secondDnsServer;
         this.successPercentage = successPercentage;
         this.averageLatency = averageLatency;
         this.dnsSuccessPercentage = dnsSuccessPercentage;
     }
 
-    public String getDnsServer() {
-        return dnsServer;
+    public String getFirstDnsServer() {
+        return firstDnsServer;
     }
 
-    public DNSResult setDnsServer(String dnsServer) {
-        this.dnsServer = dnsServer;
+    public DNSResult setFirstDnsServer(String firstDnsServer) {
+        this.firstDnsServer = firstDnsServer;
+        return this;
+    }
+
+    public String getSecondDnsServer() {
+        return secondDnsServer;
+    }
+
+    public DNSResult setSecondDnsServer(String secondDnsServer) {
+        this.secondDnsServer = secondDnsServer;
         return this;
     }
 
@@ -55,7 +66,8 @@ public class DNSResult {
     @Override
     public String toString() {
         return "DNSResult{" +
-                "dnsServer='" + dnsServer + '\'' +
+                "firstDnsServer='" + firstDnsServer + '\'' +
+                ", secondDnsServer='" + secondDnsServer + '\'' +
                 ", successPercentage=" + successPercentage +
                 ", averageLatency=" + averageLatency +
                 ", dnsSuccessPercentage=" + dnsSuccessPercentage +

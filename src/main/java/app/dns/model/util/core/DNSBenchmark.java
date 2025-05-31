@@ -1,7 +1,6 @@
 package app.dns.model.util.core;
 
 import app.dns.model.entity.DNSResult;
-import app.dns.model.entity.Type;
 import app.dns.model.util.BenchmarkRunner;
 import app.dns.model.util.ProgressListener;
 import org.apache.logging.log4j.LogManager;
@@ -42,19 +41,21 @@ public class DNSBenchmark {
         try {
             if (OS.contains("win")) {
                 Runtime.getRuntime().exec("ipconfig /flushdns");
+                logger.info("System resolver cache flushed.");
                 return true;
             } else if (OS.contains("mac")) {
                 Runtime.getRuntime().exec(new String[]{
                         "/bin/sh", "-c", "sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder"
                 });
+                logger.info("System resolver cache flushed.");
                 return true;
             }  else if (OS.contains("nix") || OS.contains("nux") || OS.contains("linux")) {
                 Runtime.getRuntime().exec(new String[]{
                         "/bin/sh", "-c", "sudo systemd-resolve --flush-caches || sudo service nscd restart || sudo service dnsmasq restart || sudo systemctl restart NetworkManager"
                 });
+                logger.info("System resolver cache flushed.");
                 return true;
             }
-            logger.info("System resolver cache flushed.");
         } catch (IOException e) {
             logger.error("Flushing failed, message : {}", e.getMessage());
         }
@@ -65,11 +66,19 @@ public class DNSBenchmark {
         List<DNSResult> dnsResults = new ArrayList<>();
         List<BenchmarkRunner> runners = new ArrayList<>();
 
+        flushCache();
+
         for (int i=0; i<dnsAddressesArray.length; i++) {
-            logger.info("Starting benchmark for DNS resolver: {}", dnsAddressesArray[i]);
-            BenchmarkRunner runner = new BenchmarkRunner(progressListener);
-            runners.add(runner);
-            runner.executeDNSTest(dnsAddressesArray[i], dnsAddressesArray.length, domainArray, packetCount, operatingSystem);
+            for (int j = i + 1; j < dnsAddressesArray.length; j++) {
+                logger.info("Starting benchmark for DNS resolvers: {} & {}", dnsAddressesArray[i], dnsAddressesArray[j]);
+                BenchmarkRunner runner = new BenchmarkRunner(
+                        dnsAddressesArray[i], dnsAddressesArray[j],
+                        dnsAddressesArray.length, domainArray,
+                        packetCount, operatingSystem,
+                        progressListener);
+                runners.add(runner);
+                runner.run();
+            }
         }
 
         for (BenchmarkRunner runner : runners) {
