@@ -7,7 +7,9 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 public class JSONReader {
@@ -66,7 +68,7 @@ public class JSONReader {
         try {
             ObjectMapper mapper = new ObjectMapper();
             String[] dnsResolversName = getAllDNSResolversName();
-            String[] results = new String[dnsResolversName.length*2];
+            List<String> results = new ArrayList<>();
             int resultCounter = 0;
 
             if (!dnsResolversName.equals("missing node")) {
@@ -81,13 +83,15 @@ public class JSONReader {
 
                     if (!dnsResolverIPs.equals("missing node")) {
                         for (int i = 0; i < dnsResolverIPs.size(); i++) {
-                            results[resultCounter] = String.valueOf(dnsResolverIPs.get(i).textValue());
-                            resultCounter++;
+                            if (dnsResolverIPs.get(i) != null && !dnsResolverIPs.get(i).textValue().equals("")) {
+                                results.add(dnsResolverIPs.get(i).textValue());
+                                resultCounter++;
+                            }
                         }
                     }
                 }
             }
-            return results;
+            return results.toArray(new String[0]);
         } catch (IOException e) {
             logger.error("Reading json file failed: " + e.getMessage());
         }
