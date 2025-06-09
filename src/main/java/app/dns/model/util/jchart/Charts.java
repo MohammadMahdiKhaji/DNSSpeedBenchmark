@@ -36,7 +36,7 @@ public class Charts {
     private List<DNSResult> sortedResults(List<DNSResult> resultsUnsorted) {
         resultsUnsorted.sort(Comparator
                 .comparingDouble(DNSResult::getSuccessPercentage).reversed()
-                .thenComparingDouble(DNSResult::getAverageLatency));
+                .thenComparingDouble(DNSResult::getLatencyScore));
         return resultsUnsorted;
     }
 
@@ -54,7 +54,7 @@ public class Charts {
 
         XYSeries series = new XYSeries("DNS Servers", false, true);
         for (int i = 0; i < resultsSorted.size(); i++) {
-            series.add(resultsSorted.get(i).getSuccessPercentage(), resultsSorted.get(i).getAverageLatency());
+            series.add(resultsSorted.get(i).getSuccessPercentage(), resultsSorted.get(i).getLatencyScore());
         }
 
         XYSeriesCollection dataset = new XYSeriesCollection();
@@ -63,7 +63,7 @@ public class Charts {
         JFreeChart chart = ChartFactory.createScatterPlot(
                 "DNS Benchmark",
                 "Access Percentage",
-                "Latency (ms)",
+                "Latency Score",
                 dataset,
                 PlotOrientation.HORIZONTAL,
                 true,
@@ -106,11 +106,11 @@ public class Charts {
                     int itemIndex = itemEntity.getItem();
                     DNSResult result = resultsSorted.get(itemIndex);
                     JOptionPane.showMessageDialog(null,
-                            String.format("First DNS Server: %s\nSecond DNS Server: %s\nSuccess: %.2f%%\nLatency: %.2f ms\nLookup Success: %.2f%%",
+                            String.format("First DNS Server: %s\nSecond DNS Server: %s\nSuccess: %.2f%%\nLatency Score: %.2f\nLookup Success: %.2f%%",
                                     result.getFirstDnsServer(),
                                     result.getSecondDnsServer(),
                                     result.getSuccessPercentage(),
-                                    result.getAverageLatency(),
+                                    result.getLatencyScore(),
                                     result.getDnsSuccessPercentage()),
                             "DNS Node Details",
                             JOptionPane.INFORMATION_MESSAGE);
@@ -124,7 +124,7 @@ public class Charts {
     }
 
     public boolean isOverlapping(DNSResult firstDot, DNSResult secondDot) {
-        if (firstDot.getAverageLatency() == secondDot.getAverageLatency() &&
+        if (firstDot.getLatencyScore() == secondDot.getLatencyScore() &&
                 firstDot.getSuccessPercentage() == secondDot.getSuccessPercentage()) {
             return true;
         }

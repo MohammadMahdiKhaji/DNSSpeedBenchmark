@@ -5,6 +5,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -12,9 +13,9 @@ public class BenchmarkRunner {
     private static Logger logger = LogManager.getLogger(BenchmarkRunner.class);
     private final static ThreadPool threadPool = new ThreadPool(Runtime.getRuntime().availableProcessors());
     private final ProgressListener listener;
+    private List<Integer> latencies = new ArrayList<>();
     private static int overallProgress = 0;
     private int localProgress = 0;
-    private int totalLatency = 0;
     private int countDNSSuccess = 0;
     private int countPingSuccess = 0;
     private String firstDns;
@@ -66,22 +67,46 @@ public class BenchmarkRunner {
             }
             if (benchmarkThread.isOverallSuccessful()) {
                 incrementCountPingSuccess();
-                addTotalLatency(benchmarkThread.getLatency());
+                addLatency(benchmarkThread.getLatency());
             }
         }
 
         dnsResult.setFirstDnsServer(firstDns);
         dnsResult.setSecondDnsServer(secondDns);
         dnsResult.setSuccessPercentage((double) getCountPingSuccess() / domainArray.length * 100);
-        dnsResult.setAverageLatency(getCountPingSuccess() == 0 ? 0.0 : (double) getTotalLatency() / getCountPingSuccess());
+        dnsResult.setLatencyScore(getCountPingSuccess() == 0 ? 0.0 :
+                        (calculateAverage() * 0.3) +
+                        (calculatePercentileValue(50) * 0.4) +
+                        (calculatePercentileValue(90) * 0.2) +
+                        (calculatePercentileValue(99) * 0.1)
+        );
         dnsResult.setDnsSuccessPercentage((double) getCountDNSSuccess() / domainArray.length * 100);
 
         logger.info("DNS resolver servers: {} & {}, success percentage: {}%, avg latency: {} ms, dns lookup success percentage: {}%",
                 dnsResult.getFirstDnsServer(),
                 dnsResult.getSecondDnsServer(),
                 String.format("%.2f", dnsResult.getSuccessPercentage()),
-                String.format("%.2f", dnsResult.getAverageLatency()),
+                String.format("%.2f", dnsResult.getLatencyScore()),
                 String.format("%.2f", dnsResult.getDnsSuccessPercentage()));
+    }
+
+    private double calculateAverage() {
+        if (latencies.isEmpty()) return 0.0;
+        return latencies.stream().mapToInt(Integer::intValue).average().orElse(0.0);
+    }
+
+    private long calculatePercentileValue(int percentile) {
+        if (latencies.isEmpty()) return 0;
+
+        Collections.sort(latencies);
+
+        if (percentile == 100) {
+            return latencies.get(latencies.size() - 1);
+        }
+
+        int index = (int) Math.ceil(percentile / 100.0 * latencies.size()) - 1;
+        index = Math.max(0, Math.min(index, latencies.size() - 1));
+        return latencies.get(index);
     }
 
     public DNSResult getDnsResult() {
@@ -104,12 +129,12 @@ public class BenchmarkRunner {
         return localProgress;
     }
 
-    public synchronized void addTotalLatency(int value) {
-        totalLatency += value;
+    public synchronized void addLatency(int latency) {
+        latencies.add(latency);
     }
 
-    public synchronized int getTotalLatency() {
-        return totalLatency;
+        public synchronized List<Integer> getLatencies() {
+        return latencies;
     }
 
     public synchronized void incrementCountDNSSuccess() {

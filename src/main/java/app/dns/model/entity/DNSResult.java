@@ -4,17 +4,17 @@ public class DNSResult {
     private String firstDnsServer;
     private String secondDnsServer;
     private double successPercentage;
-    private double averageLatency;
+    private double latencyScore;
     private double dnsSuccessPercentage;
 
     public DNSResult() {
     }
 
-    public DNSResult(String firstDnsServer, String secondDnsServer, double successPercentage, double averageLatency, double dnsSuccessPercentage) {
+    public DNSResult(String firstDnsServer, String secondDnsServer, double successPercentage, double latencyScore, double dnsSuccessPercentage) {
         this.firstDnsServer = firstDnsServer;
         this.secondDnsServer = secondDnsServer;
         this.successPercentage = successPercentage;
-        this.averageLatency = averageLatency;
+        this.latencyScore = latencyScore;
         this.dnsSuccessPercentage = dnsSuccessPercentage;
     }
 
@@ -45,12 +45,12 @@ public class DNSResult {
         return this;
     }
 
-    public double getAverageLatency() {
-        return averageLatency;
+    public double getLatencyScore() {
+        return latencyScore;
     }
 
-    public DNSResult setAverageLatency(double averageLatency) {
-        this.averageLatency = averageLatency;
+    public DNSResult setLatencyScore(double latencyScore) {
+        this.latencyScore = latencyScore;
         return this;
     }
 
@@ -69,7 +69,7 @@ public class DNSResult {
                 "firstDnsServer='" + firstDnsServer + '\'' +
                 ", secondDnsServer='" + secondDnsServer + '\'' +
                 ", successPercentage=" + successPercentage +
-                ", averageLatency=" + averageLatency +
+                ", latencyScore=" + latencyScore +
                 ", dnsSuccessPercentage=" + dnsSuccessPercentage +
                 '}';
     }

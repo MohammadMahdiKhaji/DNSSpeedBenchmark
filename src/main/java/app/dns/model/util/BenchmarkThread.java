@@ -8,11 +8,15 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 
 public class BenchmarkThread implements Runnable {
     private static Logger logger = LogManager.getLogger(BenchmarkThread.class);
+    private final static int TIMEOUT_MILLISECONDS = 500;
     private String targetDomain;
     private String firstDns;
     private String secondDns;
@@ -36,38 +40,19 @@ public class BenchmarkThread implements Runnable {
     @Override
     public void run() {
         try {
-            Integer avg;
             String targetIP;
-
             logger.info("Starting benchmark for domain: {}; using the first DNS: {}", targetDomain, firstDns);
             targetIP = lookup(targetDomain, firstDns);
-            if (targetIP != null) {
-                avg = processPing(targetIP);
-
-                if (avg != null) {
-                    latency = avg;
-                    overallSuccessful = true;
-                    done = true;
-                    logger.info("Benchmark for domain: {}; using DNS resolvers: {} & {} is over", targetDomain, firstDns, secondDns);
-                    return;
-                }
-                logger.info("Benchmark for domain: {}; using first DNS resolvers: {} has failed", targetDomain, firstDns);
+            if (benchmark(targetIP, firstDns)) {
+                return;
             }
 
             logger.info("Starting benchmark for domain: {}; using the second DNS: {}", targetDomain, secondDns);
             targetIP = lookup(targetDomain, secondDns);
-            if (targetIP != null) {
-                avg = processPing(targetIP);
-
-                if (avg != null) {
-                    latency = avg;
-                    overallSuccessful = true;
-                    done = true;
-                    logger.info("Benchmark for domain: {}; using DNS resolvers: {} & {} is over", targetDomain, firstDns, secondDns);
-                    return;
-                }
-                logger.info("Benchmark for domain: {}; using second DNS resolvers: {} has failed", targetDomain, secondDns);
+            if (benchmark(targetIP, secondDns)) {
+                return;
             }
+
             logger.info("Benchmark for domain: {}; using DNS resolvers: {} & {} is over", targetDomain, firstDns, secondDns);
         } catch (UnknownHostException e) {
             logger.error("DNS failed: " + e.getMessage());
@@ -76,6 +61,27 @@ public class BenchmarkThread implements Runnable {
         } catch (Exception e) {
             logger.error("Ping failed: " + e.getMessage());
         }
+    }
+
+    public boolean benchmark(String targetIP, String dns) throws IOException {
+        Duration duration;
+        Instant start;
+        boolean results;
+
+        if (targetIP != null) {
+            start = Instant.now();
+            results = processReachability(targetIP);
+            duration = Duration.between(start, Instant.now());
+            if (results) {
+                latency = (int) duration.toMillis();
+                overallSuccessful = true;
+                done = true;
+                logger.info("Benchmark for domain: {}; using DNS resolvers: {} & {} is over", targetDomain, firstDns, secondDns);
+                return true;
+            }
+        }
+        logger.info("Benchmark for domain: {}; using DNS resolver: {} has failed", targetDomain, dns);
+        return false;
     }
 
     public String lookup(String targetDomain, String dns) throws UnknownHostException, TextParseException {
@@ -96,11 +102,27 @@ public class BenchmarkThread implements Runnable {
         if (targetIP != null) {
             ProcessBuilder processBuilder = new ProcessBuilder(pingCMD(targetIP, packetCount, OS));
             Process process = processBuilder.start();
-            process.waitFor(500, TimeUnit.MILLISECONDS);
+            process.waitFor(TIMEOUT_MILLISECONDS, TimeUnit.MILLISECONDS);
             process.destroy();
             return getAvg(process.getInputStream());
         }
         return null;
+    }
+
+    public boolean processReachability(String targetIP) throws IOException {
+        if (targetIP != null) {
+            String[] targetIPInArray = targetIP.split("\\.");
+            byte[] ipBytes = new byte[targetIPInArray.length];
+            for (int i=0; i<targetIPInArray.length; i++) {
+                //Byte.parseByte() throws an exception for values >127,
+                //while (byte) Integer.parseInt() allows 0–255 and wraps it to a signed byte,
+                //which is suitable for IPs.
+                ipBytes[i] = (byte) Integer.parseInt(targetIPInArray[i]);
+            }
+            //InetAddress doesn't exactly run an OS-level ping command, check documentation
+            return InetAddress.getByAddress(ipBytes).isReachable(TIMEOUT_MILLISECONDS);
+        }
+        return false;
     }
 
     public String[] pingCMD(String ip, int packetCount, String OS) {
@@ -129,6 +151,7 @@ public class BenchmarkThread implements Runnable {
         }
         return null;
     }
+
     public boolean isOverallSuccessful() {
         return overallSuccessful;
     }

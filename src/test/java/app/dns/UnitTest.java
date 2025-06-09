@@ -19,6 +19,18 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class UnitTest {
 
     @Test
+    public void reachableIP() {
+        String targetIP = "200.22.122.100";
+        if (targetIP != null) {
+            String[] subIp = targetIP.split("\\.");
+            byte[] bytes = new byte[subIp.length];
+            for (int i=0; i<subIp.length; i++) {
+                bytes[i] = (byte) Integer.parseInt(subIp[i]);
+            }
+            System.out.println(bytes);
+        }
+    }
+    @Test
     @Disabled
     void tstLookup() throws TextParseException, UnknownHostException {
         Resolver resolver = new SimpleResolver("10.202.10.10");
