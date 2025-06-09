@@ -46,7 +46,6 @@ public class BenchmarkRunner {
         for (String targetDomain : domainArray) {
             BenchmarkThread benchmarkThread = new BenchmarkThread(targetDomain, firstDns, secondDns, packetCount, operatingSystem);
             threads.add(benchmarkThread);
-            threadPool.execute(benchmarkThread);
             futures.add(CompletableFuture.runAsync(benchmarkThread, threadPool));
         }
 
