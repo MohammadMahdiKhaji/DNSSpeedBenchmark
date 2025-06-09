@@ -12,6 +12,7 @@ public class MainApp extends Application {
     @Override
     public void start(Stage primaryStage) throws Exception {
         Parent root = FXMLLoader.load(getClass().getResource("/app/dns/DNSBenchmark.fxml"));
+        primaryStage.setResizable(false);
         primaryStage.setTitle("DNS Viewer");
         primaryStage.setScene(new Scene(root));
         primaryStage.show();
