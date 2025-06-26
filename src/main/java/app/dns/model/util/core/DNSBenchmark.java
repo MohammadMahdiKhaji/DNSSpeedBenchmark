@@ -82,13 +82,9 @@ public class DNSBenchmark {
         }
 
         for (BenchmarkRunner runner : runners) {
-            while(true) {
-                if (runner.getDnsResult() != null) {
-                    dnsResults.add(runner.getDnsResult());
-                    break;
-                }
-            }
+            dnsResults.add(runner.getResults());
         }
+
         return dnsResults;
     }
 }

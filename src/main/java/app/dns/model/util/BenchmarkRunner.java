@@ -7,11 +7,11 @@ import org.apache.logging.log4j.Logger;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 
 public class BenchmarkRunner {
     private static Logger logger = LogManager.getLogger(BenchmarkRunner.class);
-    private final static ThreadPool threadPool = new ThreadPool(Runtime.getRuntime().availableProcessors());
+    private final static ThreadPool threadPool = new ThreadPool(20);
     private final ProgressListener listener;
     private List<Integer> latencies = new ArrayList<>();
     private static int overallProgress = 0;
@@ -25,6 +25,8 @@ public class BenchmarkRunner {
     private int packetCount;
     private String operatingSystem;
     private DNSResult dnsResult = new DNSResult();
+    private List<BenchmarkThread> threads = new ArrayList<>();
+    private CountDownLatch doneSignal;
 
     public BenchmarkRunner(String firstDns, String secondDns,
                            int dnsSize, String[] domainArray,
@@ -40,53 +42,62 @@ public class BenchmarkRunner {
     }
 
     public void run() {
-        List<CompletableFuture> futures = new ArrayList<>();
-        List<BenchmarkThread> threads = new ArrayList<>();
+        doneSignal = new CountDownLatch(domainArray.length);
 
         for (String targetDomain : domainArray) {
-            BenchmarkThread benchmarkThread = new BenchmarkThread(targetDomain, firstDns, secondDns, packetCount, operatingSystem);
+            BenchmarkThread benchmarkThread =
+                    new BenchmarkThread(
+                            targetDomain, firstDns, secondDns,
+                            packetCount, operatingSystem, doneSignal);
             threads.add(benchmarkThread);
-            futures.add(CompletableFuture.runAsync(benchmarkThread, threadPool));
+            threadPool.execute(benchmarkThread);
         }
-
-        futures.forEach(CompletableFuture::join);
-        setResults(threads);
     }
 
-    public void setResults(List<BenchmarkThread> threads) {
+    public DNSResult getResults() {
+
+        try {
+            doneSignal.await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            logger.error("Interrupted while waiting for benchmark threads", e);
+        }
 
         for (BenchmarkThread benchmarkThread : threads) {
-
-            incrementLocalProgress();
-            incrementOverallProgress();
-
-            listener.updateTaskProgress((double) getOverallProgress() / (((dnsSize * (dnsSize-1))/2) * domainArray.length));
-            if (benchmarkThread.isDnsSuccessful()) {
-                incrementCountDNSSuccess();
-            }
-            if (benchmarkThread.isOverallSuccessful()) {
-                incrementCountPingSuccess();
-                addLatency(benchmarkThread.getLatency());
+            if (benchmarkThread.isDone()) {
+                incrementLocalProgress();
+                if (benchmarkThread.isDnsSuccessful()) {
+                    incrementCountDNSSuccess();
+                }
+                if (benchmarkThread.isOverallSuccessful()) {
+                    incrementCountPingSuccess();
+                    addLatency(benchmarkThread.getLatency());
+                }
             }
         }
+
+        incrementOverallProgress();
+        updateProgressBar();
 
         dnsResult.setFirstDnsServer(firstDns);
         dnsResult.setSecondDnsServer(secondDns);
         dnsResult.setSuccessPercentage((double) getCountPingSuccess() / domainArray.length * 100);
         dnsResult.setLatencyScore(getCountPingSuccess() == 0 ? 0.0 :
-                        (calculateAverage() * 0.3) +
+                (calculateAverage() * 0.3) +
                         (calculatePercentileValue(50) * 0.4) +
                         (calculatePercentileValue(90) * 0.2) +
                         (calculatePercentileValue(99) * 0.1)
         );
         dnsResult.setDnsSuccessPercentage((double) getCountDNSSuccess() / domainArray.length * 100);
 
-        logger.info("DNS resolver servers: {} & {}, success percentage: {}%, avg latency: {} ms, dns lookup success percentage: {}%",
+        logger.info("DNS resolver servers: {} & {}, success percentage: {}%, latency score: {} ms, dns lookup success percentage: {}%",
                 dnsResult.getFirstDnsServer(),
                 dnsResult.getSecondDnsServer(),
                 String.format("%.2f", dnsResult.getSuccessPercentage()),
                 String.format("%.2f", dnsResult.getLatencyScore()),
                 String.format("%.2f", dnsResult.getDnsSuccessPercentage()));
+
+        return dnsResult;
     }
 
     private double calculateAverage() {
@@ -112,6 +123,10 @@ public class BenchmarkRunner {
         return dnsResult;
     }
 
+    public synchronized void updateProgressBar() {
+        listener.updateTaskProgress((double) getOverallProgress() / ((dnsSize * (dnsSize - 1)) / 2));
+    }
+
     public static synchronized void incrementOverallProgress() {
         overallProgress++;
     }
@@ -132,7 +147,7 @@ public class BenchmarkRunner {
         latencies.add(latency);
     }
 
-        public synchronized List<Integer> getLatencies() {
+    public synchronized List<Integer> getLatencies() {
         return latencies;
     }
 
