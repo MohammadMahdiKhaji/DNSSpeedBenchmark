@@ -12,11 +12,12 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 public class BenchmarkThread implements Runnable {
     private static Logger logger = LogManager.getLogger(BenchmarkThread.class);
-    private final static int TIMEOUT_MILLISECONDS = 500;
+    private final static int TIMEOUT_MILLISECONDS = 150;
     private String targetDomain;
     private String firstDns;
     private String secondDns;
@@ -26,13 +27,16 @@ public class BenchmarkThread implements Runnable {
     private boolean overallSuccessful;
     private boolean dnsSuccessful;
     private volatile boolean done;
+    private CountDownLatch doneSignal;
 
-    public BenchmarkThread(String targetDomain, String firstDns, String secondDns, int packetCount, String OS) {
+    public BenchmarkThread(String targetDomain, String firstDns, String secondDns,
+                           int packetCount, String OS, CountDownLatch doneSignal) {
         this.targetDomain = targetDomain;
         this.firstDns = firstDns;
         this.secondDns = secondDns;
         this.packetCount = packetCount;
         this.OS = OS;
+        this.doneSignal = doneSignal;
         this.overallSuccessful = false;
         this.dnsSuccessful = false;
         this.done = false;
@@ -60,6 +64,11 @@ public class BenchmarkThread implements Runnable {
             logger.error("Task failed: " + e.getMessage());
         } catch (Exception e) {
             logger.error("Ping failed: " + e.getMessage());
+        } finally {
+//            finally does get called even if there are return statements in try or catch blocks.
+            if (doneSignal != null) {
+                doneSignal.countDown();
+            }
         }
     }
 
