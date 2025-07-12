@@ -1,40 +1,29 @@
-package app.dns.model.util.core;
+package app.dns.model.core;
 
 import app.dns.model.entity.DNSResult;
-import app.dns.model.util.BenchmarkRunner;
+import app.dns.model.BenchmarkRunner;
 import app.dns.model.util.ProgressListener;
+import app.dns.model.util.properties.Configs;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.*;
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties;
 
 public class DNSBenchmark {
     private static Logger logger = LogManager.getLogger(DNSBenchmark.class);
-    private final static Properties properties = new Properties();
     private String OS;
     private ProgressListener progressListener;
 
     public DNSBenchmark(ProgressListener progressListener) {
         this.progressListener = progressListener;
-
         OS = System.getProperty("os.name").toLowerCase();
-
-        try (InputStream inputStream = getClass().getResourceAsStream("/config.properties")) {
-            properties.load(inputStream);
-        } catch (FileNotFoundException e) {
-            logger.error("Configuration file not found", e);
-            throw new RuntimeException("Configuration file missing", e);
-        } catch (IOException e) {
-            logger.error("Error reading configuration file", e);
-            throw new RuntimeException("Could not read configuration file", e);
-        }
     }
 
-    public List<DNSResult> execute(String[] dnsResolversAddresses, String[] domains, int packetCount) {
-        return testDNSPerformance(dnsResolversAddresses, domains, packetCount, OS);
+    public List<DNSResult> execute(String[] dnsResolversAddresses, String[] domains) {
+        return testDNSPerformance(dnsResolversAddresses, domains, OS);
     }
 
     private boolean flushCache() {
@@ -62,11 +51,21 @@ public class DNSBenchmark {
         return false;
     }
 
-    private List<DNSResult> testDNSPerformance(String[] dnsAddressesArray, String[] domainArray, int packetCount, String operatingSystem) {
+    private List<DNSResult> testDNSPerformance(String[] dnsAddressesArray, String[] domainArray, String operatingSystem) {
         List<DNSResult> dnsResults = new ArrayList<>();
         List<BenchmarkRunner> runners = new ArrayList<>();
 
         flushCache();
+
+        for (int i=0; i<domainArray.length; i++) {
+            try {
+                if (!InetAddress.getByName(domainArray[i]).isReachable(Configs.getReachabilityTimeout())) {
+                    domainArray = remove(domainArray, i);
+                }
+            } catch (IOException e) {
+                logger.error("Pinging failed, message : {}", e.getMessage());
+            }
+        }
 
         for (int i=0; i<dnsAddressesArray.length; i++) {
             for (int j = i + 1; j < dnsAddressesArray.length; j++) {
@@ -74,8 +73,7 @@ public class DNSBenchmark {
                 BenchmarkRunner runner = new BenchmarkRunner(
                         dnsAddressesArray[i], dnsAddressesArray[j],
                         dnsAddressesArray.length, domainArray,
-                        packetCount, operatingSystem,
-                        progressListener);
+                        operatingSystem, progressListener);
                 runners.add(runner);
                 runner.run();
             }
@@ -86,5 +84,22 @@ public class DNSBenchmark {
         }
 
         return dnsResults;
+    }
+
+    public static String[] remove(String[] arr, int in) {
+
+        if (arr == null || in < 0 || in >= arr.length) {
+            return arr;
+        }
+
+        String[] arr2 = new String[arr.length - 1];
+        for (int i = 0, k = 0; i < arr.length; i++) {
+            if (i == in)
+                continue;
+
+            arr2[k++] = arr[i];
+        }
+
+        return arr2;
     }
 }

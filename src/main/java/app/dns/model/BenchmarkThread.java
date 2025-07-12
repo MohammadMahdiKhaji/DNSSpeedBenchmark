@@ -1,5 +1,6 @@
-package app.dns.model.util;
+package app.dns.model;
 
+import app.dns.model.util.properties.Configs;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.xbill.DNS.*;
@@ -17,11 +18,9 @@ import java.util.concurrent.TimeUnit;
 
 public class BenchmarkThread implements Runnable {
     private static Logger logger = LogManager.getLogger(BenchmarkThread.class);
-    private final static int TIMEOUT_MILLISECONDS = 150;
     private String targetDomain;
     private String firstDns;
     private String secondDns;
-    private int packetCount;
     private String OS;
     private int latency;
     private boolean overallSuccessful;
@@ -29,12 +28,10 @@ public class BenchmarkThread implements Runnable {
     private volatile boolean done;
     private CountDownLatch doneSignal;
 
-    public BenchmarkThread(String targetDomain, String firstDns, String secondDns,
-                           int packetCount, String OS, CountDownLatch doneSignal) {
+    public BenchmarkThread(String targetDomain, String firstDns, String secondDns, String OS, CountDownLatch doneSignal) {
         this.targetDomain = targetDomain;
         this.firstDns = firstDns;
         this.secondDns = secondDns;
-        this.packetCount = packetCount;
         this.OS = OS;
         this.doneSignal = doneSignal;
         this.overallSuccessful = false;
@@ -109,9 +106,9 @@ public class BenchmarkThread implements Runnable {
 
     public Integer processPing(String targetIP) throws IOException, InterruptedException {
         if (targetIP != null) {
-            ProcessBuilder processBuilder = new ProcessBuilder(pingCMD(targetIP, packetCount, OS));
+            ProcessBuilder processBuilder = new ProcessBuilder(pingCMD(targetIP, Configs.getPingPacketCount(), OS));
             Process process = processBuilder.start();
-            process.waitFor(TIMEOUT_MILLISECONDS, TimeUnit.MILLISECONDS);
+            process.waitFor(Configs.getPingTimeout(), TimeUnit.MILLISECONDS);
             process.destroy();
             return getAvg(process.getInputStream());
         }
@@ -129,7 +126,7 @@ public class BenchmarkThread implements Runnable {
                 ipBytes[i] = (byte) Integer.parseInt(targetIPInArray[i]);
             }
             //InetAddress doesn't exactly run an OS-level ping command, check documentation
-            return InetAddress.getByAddress(ipBytes).isReachable(TIMEOUT_MILLISECONDS);
+            return InetAddress.getByAddress(ipBytes).isReachable(Configs.getReachabilityTimeout());
         }
         return false;
     }
