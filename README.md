@@ -74,6 +74,25 @@ or
 gradlew run
 ```
 
+### Customizing Configuration
+
+If you want to customize properties like:
+
+1. thread-pool.size
+2. ping.timeout
+3. ping.packet-count
+4. reachability.timeout
+
+```
+src/main/resources/config.properties
+```
+
+Similarly, if you want to change DNS resolvers or target domains, you should modify the following files before running the project:
+```
+src/main/resources/data/domain.json
+src/main/resources/data/dns.json
+```
+
 ---
 
 ## Screenshots
