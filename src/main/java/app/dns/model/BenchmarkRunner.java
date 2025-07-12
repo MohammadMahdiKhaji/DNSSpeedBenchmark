@@ -1,6 +1,9 @@
-package app.dns.model.util;
+package app.dns.model;
 
 import app.dns.model.entity.DNSResult;
+import app.dns.model.util.ProgressListener;
+import app.dns.model.util.ThreadPool;
+import app.dns.model.util.properties.Configs;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -11,7 +14,7 @@ import java.util.concurrent.CountDownLatch;
 
 public class BenchmarkRunner {
     private static Logger logger = LogManager.getLogger(BenchmarkRunner.class);
-    private final static ThreadPool threadPool = new ThreadPool(20);
+    private final static ThreadPool threadPool = new ThreadPool(Configs.getThreadPoolSize());
     private final ProgressListener listener;
     private List<Integer> latencies = new ArrayList<>();
     private static int overallProgress = 0;
@@ -22,7 +25,6 @@ public class BenchmarkRunner {
     private String secondDns;
     private int dnsSize;
     private String[] domainArray;
-    private int packetCount;
     private String operatingSystem;
     private DNSResult dnsResult = new DNSResult();
     private List<BenchmarkThread> threads = new ArrayList<>();
@@ -30,13 +32,11 @@ public class BenchmarkRunner {
 
     public BenchmarkRunner(String firstDns, String secondDns,
                            int dnsSize, String[] domainArray,
-                           int packetCount, String operatingSystem,
-                           ProgressListener listener) {
+                           String operatingSystem, ProgressListener listener) {
         this.firstDns = firstDns;
         this.secondDns = secondDns;
         this.dnsSize = dnsSize;
         this.domainArray = domainArray;
-        this.packetCount = packetCount;
         this.operatingSystem = operatingSystem;
         this.listener = listener;
     }
@@ -46,9 +46,7 @@ public class BenchmarkRunner {
 
         for (String targetDomain : domainArray) {
             BenchmarkThread benchmarkThread =
-                    new BenchmarkThread(
-                            targetDomain, firstDns, secondDns,
-                            packetCount, operatingSystem, doneSignal);
+                    new BenchmarkThread(targetDomain, firstDns, secondDns, operatingSystem, doneSignal);
             threads.add(benchmarkThread);
             threadPool.execute(benchmarkThread);
         }
