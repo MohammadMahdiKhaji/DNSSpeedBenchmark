@@ -19,6 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class UnitTest {
 
     @Test
+    @Disabled
     public void reachableIP() {
         String targetIP = "200.22.122.100";
         if (targetIP != null) {

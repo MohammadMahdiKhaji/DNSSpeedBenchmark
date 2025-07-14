@@ -1,6 +1,8 @@
 package app.dns.model.util.jmx;
 
+import app.dns.model.util.jmx.auth.CustomAuthenticator;
 import app.dns.model.util.jmx.mbeans.DNSBenchmarkStats;
+import app.dns.model.util.properties.Configs;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -10,11 +12,24 @@ import javax.management.remote.JMXConnectorServerFactory;
 import javax.management.remote.JMXServiceURL;
 import java.lang.management.ManagementFactory;
 import java.rmi.registry.LocateRegistry;
+import java.util.HashMap;
 
 public class JMXServer {
     private static Logger logger = LogManager.getLogger(JMXServer.class);
+    private static JMXServer INSTANCE;
+    private static final String HOST = Configs.getJmxServerIP();
+    private static final int PORT = Configs.getJmxServerPort();
+    private static final String JNDINAME = Configs.getJmxServerJNDI();
 
-    public JMXServer() {
+    private JMXServer() {
+    }
+
+    public static JMXServer getInstance() {
+        if(INSTANCE == null) {
+            INSTANCE = new JMXServer();
+        }
+
+        return INSTANCE;
     }
 
     public void startJMXServer() {
@@ -26,14 +41,17 @@ public class JMXServer {
             registerMBean(mbs, mbean, mbeanObjectName);
 
             JMXServiceURL url = new JMXServiceURL(
-                    "service:jmx:rmi:///jndi/rmi://localhost:9999/server");
+                    "service:jmx:rmi:///jndi/rmi://"+HOST+":"+PORT+"/"+JNDINAME);
+
+            HashMap<String, Object> env = new HashMap<>();
+            env.put(JMXConnectorServer.AUTHENTICATOR, new CustomAuthenticator());
 
             JMXConnectorServer cs =
-                    JMXConnectorServerFactory.newJMXConnectorServer(url, null, mbs);
+                    JMXConnectorServerFactory.newJMXConnectorServer(url, env, mbs);
 
             printMBeanInfo(mbs, mbeanObjectName, "DNSBenchmarkStats");
 
-            LocateRegistry.createRegistry(9999);
+            LocateRegistry.createRegistry(PORT);
             cs.start();
         } catch (Exception e) {
             e.printStackTrace();

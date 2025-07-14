@@ -39,6 +39,11 @@ test {
 }
 
 application {
+	applicationDefaultJvmArgs = [
+			"-Dnetworkaddress.cache.ttl=0",
+			"-Dnetworkaddress.cache.negative.ttl=0",
+			"-Djava.security.auth.login.config=src/main/resources/jmxremote/jaas.config"
+	]
 	mainClass = "app.dns.MainApp"
 	mainModule = "DNSSpeedBenchmark"
 }

@@ -30,13 +30,15 @@ public class Property<T> {
         } else if (propertyType == Byte.class) {
             this.propertyValue = (T) Byte.valueOf(propertyValue);
         } else if (propertyType == Short.class) {
-            this.propertyValue = (T) Integer.valueOf(propertyValue);
+            this.propertyValue = (T) Short.valueOf(propertyValue);
         } else if (propertyType == Long.class) {
-            this.propertyValue = (T) Integer.valueOf(propertyValue);
+            this.propertyValue = (T) Long.valueOf(propertyValue);
         } else if (propertyType == Float.class) {
-            this.propertyValue = (T) Integer.valueOf(propertyValue);
+            this.propertyValue = (T) Float.valueOf(propertyValue);
         } else if (propertyType == Double.class) {
-            this.propertyValue = (T) Integer.valueOf(propertyValue);
+            this.propertyValue = (T) Double.valueOf(propertyValue);
+        } else if (propertyType == String.class) {
+            this.propertyValue = (T) String.valueOf(propertyValue);
         } else {
             throw new IllegalArgumentException ("The generic type doesn't exist: " + propertyType.getName(), null);
         }
