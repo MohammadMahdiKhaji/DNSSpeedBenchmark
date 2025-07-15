@@ -14,15 +14,15 @@ import java.util.Map;
 
 public class JSONReader {
     private static Logger logger = LogManager.getLogger(JSONReader.class);
-    private final static String DOMAIN_JSON_NAME = "/data/domain.json";
-    private final static String DNS_JSON_NAME = "/data/dns.json";
+    private static final String DOMAIN_JSON_FILE_ADDRESS = "/data/domain.json";
+    private static final String DNS_JSON_FILE_ADDRESS = "/data/dns.json";
 
     public JSONReader() {}
 
     public static String[] getDomainsByDomainName(String domainName) {
         try {
             ObjectMapper mapper = new ObjectMapper();
-            InputStream inputStream = JSONReader.class.getResourceAsStream(DOMAIN_JSON_NAME);
+            InputStream inputStream = JSONReader.class.getResourceAsStream(DOMAIN_JSON_FILE_ADDRESS);
             JsonNode domainsJson = mapper.readTree(inputStream);
             JsonNode domains = domainsJson
                     .path("domain")
@@ -42,10 +42,32 @@ public class JSONReader {
         return null;
     }
 
+    public static String[] getDomainNames() {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            InputStream inputStream = JSONReader.class.getResourceAsStream(DOMAIN_JSON_FILE_ADDRESS);
+            JsonNode domainsJson = mapper.readTree(inputStream);
+            Iterator<Map.Entry<String, JsonNode>> entryIterator =
+                    domainsJson.path("domain").fields();
+
+            int size = domainsJson.path("domain").size();
+            String[] results = new String[size];
+            for (int i = 0; i < size; i++) {
+                if (entryIterator.hasNext()) {
+                        results[i] = String.valueOf(entryIterator.next().getKey());
+                }
+            }
+            return results;
+        } catch (IOException e) {
+            logger.error("Reading json file failed: " + e.getMessage());
+        }
+        return null;
+    }
+
     public static String[] getAllDNSResolversName() {
         try {
             ObjectMapper mapper = new ObjectMapper();
-            InputStream inputStream = JSONReader.class.getResourceAsStream(DNS_JSON_NAME);
+            InputStream inputStream = JSONReader.class.getResourceAsStream(DNS_JSON_FILE_ADDRESS);
             JsonNode dnsResolversJson = mapper.readTree(inputStream);
             JsonNode dnsResolvers = dnsResolversJson
                     .path("dns");
@@ -72,7 +94,7 @@ public class JSONReader {
             int resultCounter = 0;
 
             if (!dnsResolversName.equals("missing node")) {
-                InputStream inputStream = JSONReader.class.getResourceAsStream(DNS_JSON_NAME);
+                InputStream inputStream = JSONReader.class.getResourceAsStream(DNS_JSON_FILE_ADDRESS);
                 JsonNode dnsResolversJson = mapper.readTree(inputStream);
 
                 for (String name : dnsResolversName) {

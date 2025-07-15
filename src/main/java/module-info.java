@@ -18,4 +18,5 @@ module DNSSpeedBenchmark {
     exports app.dns.model;
     exports app.dns.model.core;
     exports app.dns.model.util.jmx.mbeans;
+    exports app.dns.model.util.jmx.auth;
 }

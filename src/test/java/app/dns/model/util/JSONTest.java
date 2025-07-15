@@ -10,4 +10,9 @@ public class JSONTest {
     void testReader() {
         JSONReader.getAllDNSResolversAddresses();
     }
+
+    @Test
+    void testReaderDomainName() {
+        JSONReader.getDomainNames();
+    }
 }

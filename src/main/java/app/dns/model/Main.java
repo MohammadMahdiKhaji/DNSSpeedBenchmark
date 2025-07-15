@@ -1,11 +1,11 @@
 package app.dns.model;
 
 import app.dns.model.entity.DNSResult;
-import app.dns.model.entity.Type;
 import app.dns.model.util.JSONReader;
 import app.dns.model.core.DNSBenchmark;
 import app.dns.model.util.ProgressListener;
 import app.dns.model.util.jchart.Charts;
+import app.dns.model.util.jmx.JMXServer;
 import app.dns.model.util.properties.Configs;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -22,8 +22,8 @@ public class Main {
         Security.setProperty("networkaddress.cache.ttl", "0");
         Security.setProperty("networkaddress.cache.negative.ttl", "0");
         try {
-            Configs configs = new Configs();
-            configs.loadValues();
+            Configs.getInstance().loadValues();
+            JMXServer.getInstance().startJMXServer();
 
             DNSBenchmark dnsBenchmark = new DNSBenchmark(new ProgressListener() {
                 @Override
@@ -34,7 +34,7 @@ public class Main {
             //SwingUtilities uses javax.swing (JWT threads) not javafx this for development purposes
             List<DNSResult> dnsResults = dnsBenchmark.execute(
                     JSONReader.getAllDNSResolversName(),
-                    JSONReader.getDomainsByDomainName(Type.getNameByNumber(Type.EA_DOMAINS)));
+                    JSONReader.getDomainsByDomainName("DISCORD"));
             SwingUtilities.invokeLater(() -> Charts.getInstance().generateDNSPerformanceChart(dnsResults));
 
         } catch (IOException e) {

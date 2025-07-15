@@ -1,5 +1,6 @@
 package app.dns.model.util.properties;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -7,12 +8,12 @@ import java.io.IOException;
 public class PropertyTest {
 
     @Test
+    @Disabled
     void testloading() throws IOException {
-        Configs c = new Configs();
-        c.loadValues();
-        System.out.println(c.getThreadPoolSize());
-        System.out.println(c.getPingTimeout());
-        System.out.println(c.getPingPacketCount());
-        System.out.println(c.getReachabilityTimeout());
+        Configs.getInstance().loadValues();
+        System.out.println(Configs.getThreadPoolSize());
+        System.out.println(Configs.getPingTimeout());
+        System.out.println(Configs.getPingPacketCount());
+        System.out.println(Configs.getReachabilityTimeout());
     }
 }

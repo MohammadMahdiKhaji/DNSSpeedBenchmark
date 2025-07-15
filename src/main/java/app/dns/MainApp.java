@@ -1,14 +1,20 @@
 package app.dns;
 
 import app.dns.model.util.jmx.JMXServer;
+import app.dns.model.util.properties.Configs;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import java.security.Security;
+import java.io.IOException;
+
 public class MainApp extends Application {
+    private static Logger logger = LogManager.getLogger(MainApp.class);
+
     @Override
     public void start(Stage primaryStage) throws Exception {
         Parent root = FXMLLoader.load(getClass().getResource("/app/dns/DNSBenchmark.fxml"));
@@ -19,16 +25,13 @@ public class MainApp extends Application {
     }
 
     public static void main(String[] args) {
-        Security.setProperty("networkaddress.cache.ttl", "0");
-        Security.setProperty("networkaddress.cache.negative.ttl", "0");
-
-        System.setProperty("com.sun.management.jmxremote.port", "9999");
-        System.setProperty("com.sun.management.jmxremote.authenticate", "false");
-        System.setProperty("com.sun.management.jmxremote.ssl", "false");
-
-        JMXServer jmxServer = new JMXServer();
-        jmxServer.startJMXServer();
-
-        launch(args);
+        try {
+            Configs.getInstance().loadValues();
+            JMXServer.getInstance().startJMXServer();
+            launch(args);
+        } catch (IOException e) {
+            logger.error("Error reading configuration file", e);
+            throw new RuntimeException("Could not read configuration file", e);
+        }
     }
 }
