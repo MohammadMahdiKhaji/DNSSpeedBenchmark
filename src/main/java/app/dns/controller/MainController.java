@@ -5,7 +5,6 @@ import app.dns.model.util.JSONReader;
 import app.dns.model.core.DNSBenchmark;
 import app.dns.model.util.ProgressListener;
 import app.dns.model.util.jchart.Charts;
-import app.dns.model.entity.Type;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
@@ -56,7 +55,7 @@ public class MainController {
 
     public List<MenuItem> loadDomainTypes() {
         List<MenuItem> menuItems = new ArrayList<>();
-        for (String string : Type.getNames()) {
+        for (String string : JSONReader.getDomainNames()) {
             menuItems.add(new MenuItem(string));
         }
         return menuItems;
@@ -81,12 +80,21 @@ public class MainController {
     }
 
     public void startBenchmark() {
-        int domainType = Type.getNumberByName(menuButtonDomains.getText());
-        if (domainType == -1) {
+        String[] domains = JSONReader.getDomainsByDomainName(menuButtonDomains.getText());
+        String[] dnsResolvers = JSONReader.getAllDNSResolversAddresses();
+
+        String warningMessage = null;
+        if (domains == null || domains.length == 0) {
+            warningMessage = "Please select a domain type.";
+        } else if (dnsResolvers == null || dnsResolvers.length == 0) {
+            warningMessage = "Please enter DNS resolvers properly into dns.json.";
+        }
+
+        if (warningMessage != null) {
             Alert alert = new Alert(Alert.AlertType.WARNING);
             alert.setTitle("Missing Input");
             alert.setHeaderText(null);
-            alert.setContentText("Please select a domain type.");
+            alert.setContentText(warningMessage);
             alert.showAndWait();
             return;
         }
@@ -109,8 +117,8 @@ public class MainController {
                     }
                 });
                 return dnsBenchmark.execute(
-                        JSONReader.getAllDNSResolversAddresses(),
-                        JSONReader.getDomainsByDomainName(Type.getNameByNumber(domainType)));
+                        dnsResolvers,
+                        domains);
             }
 
             @Override
@@ -139,6 +147,7 @@ public class MainController {
             protected void updateProgress(double workDone, double max) {
                 super.updateProgress(workDone, max);
             }
+            //super.updateProgress updates the progressProperty of the task which is bound to the progressBar
         };
 
         progressBar.progressProperty().bind(benchmarkTask.progressProperty());

@@ -1,7 +1,6 @@
 package app.dns.model;
 
 import app.dns.model.entity.DNSResult;
-import app.dns.model.entity.Type;
 import app.dns.model.util.JSONReader;
 import app.dns.model.core.DNSBenchmark;
 import app.dns.model.util.ProgressListener;
@@ -35,7 +34,7 @@ public class Main {
             //SwingUtilities uses javax.swing (JWT threads) not javafx this for development purposes
             List<DNSResult> dnsResults = dnsBenchmark.execute(
                     JSONReader.getAllDNSResolversName(),
-                    JSONReader.getDomainsByDomainName(Type.getNameByNumber(Type.EA_DOMAINS)));
+                    JSONReader.getDomainsByDomainName("DISCORD"));
             SwingUtilities.invokeLater(() -> Charts.getInstance().generateDNSPerformanceChart(dnsResults));
 
         } catch (IOException e) {
